@@ -1,0 +1,204 @@
+\documentclass[12pt]{article}
+
+%opening
+\title{Ground Delay Program Planning: A Dynamic Programming Approach}
+\author{Haoxiang Yang}
+\date{7/11/2016}
+\usepackage[margin=0.5in,tmargin = 1in, bmargin = 1in]{geometry}
+\usepackage{enumitem}
+\usepackage{mathtools}
+\usepackage{mathrsfs}
+\usepackage{amsfonts}
+\usepackage{algpseudocode}
+\usepackage{listings}
+\usepackage{amsthm}
+\usepackage{grffile}
+\usepackage{sidecap}
+\usepackage{float}
+\usepackage{longtable}
+\allowdisplaybreaks
+
+\begin{document}
+
+\maketitle
+
+\section{Problem Overview}
+	In air traffic control, one of the most used and most effective strategy is the ground delay program.
+\section{Dynamic Programming Model for Arrivals}
+	The ground delay program planning can be considered as a sequential decision problem. The decision maker in the ground delay program is the destination airport and the decisions include the clearance time of takeoff and the actual landing time for the flights to the destination airport. Here we use a look-ahead policy to derive a dynamic programming formulation as follows:\\
+	\begin{longtable}[H]{l l l}
+		Parameters and Sets: & \(\qquad\) & \\
+		\(T\) & \(\qquad\) & last time period\\
+		\(\mathcal{T} = \{1, \dots, T\}\) & \(\qquad\) & set of time periods\\
+		\(\mathcal{F}\) & \(\qquad\) & set of flights\\
+		\(\tau_f\) & \(\qquad\) & duration of flight $f, \forall f \in \mathcal{F}$\\
+		\(S_{ft}\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ is originally scheduled for departure before $t$, $\forall t \in \mathcal{T}, $\\
+		&$f \in \mathcal{F}$\\
+		0 & otherwise\\
+		\end{cases*}\) \\
+		\(g_{ft}\) & \(\qquad\) & ground delay cost of flight \(f\) at time period \(t\), \(\forall t \in \mathcal{T}, f \in \mathcal{F}\)\\
+		\(a_{f}\) & \(\qquad\) & airborne delay cost of flight \(f\) per period, \(\forall f \in \mathcal{F}\)\\
+		\(c_{f}\) & \(\qquad\) & cancellation cost of flight \(f\)\\
+		\(q\) & \(\qquad\) & terminal penalty cost\\
+		\(N\) & \(\qquad\) & ground delay program planning horizon\\
+		& &\\
+		States: & \(\qquad\) & \\
+		\(X_{ft}\) & \(\qquad = \) & \( \begin{cases*}
+			1 & if the flight $f$ has been cleared for departure before $t$, $\forall t \in \mathcal{T}, f \in \mathcal{F}$\\
+			0 & otherwise\\
+		\end{cases*}\)\\
+		\(Y_{ft}\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has landed before $t$, $\forall t \in \mathcal{T}, f \in \mathcal{F}$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(Z_{fts}\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has taken off $s$ time period before $t$, $\forall t \in \mathcal{T}, f \in \mathcal{F},$\\
+		& $s \in \{1, \dots,\tau_f\}$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(D_{fts}\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has been cleared $s$ time period before $t$, $\forall t \in \mathcal{T}, f \in \mathcal{F},$\\
+		& $s \in \{1, \dots,N\}$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		& &\\
+		Actions: & &\\
+		\(u_{ft}\) & \(\qquad = \) & \(\begin{cases*}
+		1 & if the flight $f$ is assigned a clearance time at time period $t$, $\forall t \in \mathcal{T},$\\
+		& $ f \in \mathcal{F}$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(v_{ft}\) & \(\qquad = \) & \(\begin{cases*}
+		1 & if the flight $f$ is cancelled at time period $t$, $\forall t \in \mathcal{T}, f \in \mathcal{F}$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(l_{ft}\) & \(\qquad = \) & \(\begin{cases*}
+		1 & if the flight $f$ lands at time period $t$, $\forall t \in \mathcal{T}, f \in \mathcal{F}$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		& & \\
+		Exogenous information: & &\\
+		\(A_t\)& \(\qquad\) & capacity at time \(t\), \(t \in \mathcal{T}\)\\
+		%\(p_{ft}\) & \(\qquad\) & probability of flight \(f\) taking off at time period \(t\), \(\forall f \in \mathcal{F}, t \in \mathcal{T}\) \\
+	\end{longtable}
+	
+	\noindent We can then write down the Bellman equation as follows. To make sure the model yields a feasible solution we can let \(A_T = |\mathcal{F}|\) with probability 1.
+	\begin{align}
+	&J_T(X_T,Y_T,Z_T,D_T) & = & \sum_{f \in \mathcal{F}} \sum_{s = 1}^{\tau_f} q(1 - Z_{fTs})\\
+	&J_t(X_t,Y_t,Z_t,D_t) & = & \min_{u_t,v_t,l_t} \ \sum_{f \in \mathcal{F}} c_fv_{ft} + g_{ft}(S_{ft} - X_{ft}) + a_f(Z_{ft\tau_f} - Y_{ft}) + \mathbb{E}\left[J_{t+1}(X_{t+1},Y_{t+1},Z_{t+1},D_{t+1})\right]
+	\end{align}
+	We can model the transition between the time period as follows:
+	\begin{align}
+		& X_{f(t+N+1)} & = & \max{\{X_{f(t+N)},D_{f(t+N+1)N}\}} \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T-N-1\}\\
+		& Y_{f(t+1)} & = & \max{\{Y_{ft},l_{ft},v_{ft}\}} \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T-1\}\\
+		& Z_{f(t+1)1} & = & X_{ft} \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T-1\}\\
+		& Z_{f(t+1)s} & = & Z_{ft(s-1)} \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T-1\}, s \in \{2, \dots, \tau_f\}\\
+		& D_{f(t+1)1} & = & \max{\{u_{ft},v_{ft}\}} \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T-1\}\\
+		& D_{f(t+1)s} & = & D_{ft(s-1)} \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T-1\}, s \in \{2, \dots, N\}
+	\end{align}
+	The model has the following constraints:
+	\begin{align}
+		& u_{ft} \leq S_{f(t+N)} \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T-N\}\\
+		& u_{ft} + v_{ft} \leq 1 - D_{ft1} \qquad \forall f \in \mathcal{F}, t \in \mathcal{T}\\
+		& u_{ft} + v_{ft} \leq 1 - X_{ft} \qquad \forall f \in \mathcal{F}, t \in \mathcal{T}\\
+		& l_{ft} \leq Z_{ft\tau_f} \qquad \forall f \in \mathcal{F}, t \in \mathcal{T}\\
+		& l_{ft} \leq 1 - Y_{ft} \qquad \forall f \in \mathcal{F}, t \in \mathcal{T}\\
+		& \sum_{f \in F} l_{ft} \leq A_t, \qquad \forall t \in \mathcal{T}
+	\end{align}
+
+\section{An Equivalent Stochastic Integer Program Formulation}\label{Model}
+	The previous section utilizes dynamic programming techniques to model the ground delay program planning problem. Another approach to look at this problem is stochastic integer program. Here we assume the decision make is solving the stochastic program every time period. Suppose we have a finite number of scenarios (even it may be really large) and we denote each scenario as \(\omega \in \Omega\). The uncertainty parameters \(\xi\) include the arrival capacity following the time period \(t\). We can write down the formulation of this multi-stage stochastic integer program of time period \(t\) as follows:
+	\begin{longtable}[H]{l l l}
+		Set and Parameters & &\\
+		\(\mathcal{F} = \mathcal{F}_1 \cup \mathcal{F}_2\) & \(\qquad\)& set of flights\\
+		\(\mathcal{F}_1\) & \(\qquad\)& set of flights that are not exempted\\
+		\(\mathcal{F}_2\) & \(\qquad\)& set of flights that are exempted\\
+		\(\mathcal{F}_3\) & \(\qquad\)& set of flights that originate from the researched airport\\
+		\(T\) & \(\qquad\) & length of planning horizon\\
+		\(\mathcal{T} = \{1, \dots,T\}\) & \(\qquad\) & set of time periods\\
+		\(\Omega\) & \(\qquad\) & set of scenarios\\
+		\(B\) & \(\qquad\) & number of scenario partitions \\
+		\(\Omega_i\) & \(\qquad\) & set of scenarios in partition \(i = \{1, \dots, B\}\)\\
+		\(\tau_f\) & \(\qquad\) & the duration of flight \(f \in \mathcal{F}\)\\
+		\(S_f\) & \(\qquad\) & original departure time of flight \(f\in \mathcal{F}\)\\
+		\(CA_t^\omega\)  & \(\qquad\) & the arrival capacity of time period \(t\) in scenario \(\omega \in \Omega\)\\
+		\(CD_t^\omega\)  & \(\qquad\) & the departure capacity of time period \(t\) in scenario \(\omega \in \Omega\)\\
+		\(CT_t^\omega\)  & \(\qquad\) & the total airport capacity of time period \(t\) in scenario \(\omega \in \Omega\)\\
+		\(N\) & \(\qquad\) & length of the planning horizon \\
+		\(g_{ft}\) & \(\qquad\) & ground delay cost of flight \(f \in \mathcal{F}_1\) at time period \(t\), \\
+		\(a_{f}\) & \(\qquad\) & airborne delay cost of flight \(f \in \mathcal{F}\) per period, \\
+		\(c_{ft}\) & \(\qquad\) & cancellation cost of flight \(f \in \mathcal{F}_1 \cup \mathcal{F}_3\) at time period \(t\)\\
+		\(o_{ft}\) & \(\qquad\) & taxi-out cost of flight \(f \in \mathcal{F}_3\)\\
+		\(O_{f}\) & \(\qquad\) & scheduled departure time for flight \(f \in \mathcal{F}_3\)\\
+		& &\\
+		Decision Variables & &\\
+		\(X_{ft}^\omega\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has been cleared for departure before $t$,\\
+		& $\forall f \in \mathcal{F}_1, t \in \{S_f - N, \dots, T\}, \omega \in \Omega$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(D_{ft}^\omega\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has departed before $t$, $\forall f \in \mathcal{F}_1, t \in \{S_f, \dots, T\}, \omega \in \Omega$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(L_{ft}^\omega\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has arrived before $t$, $\forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, \omega \in \Omega$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(Y_{ft}^\omega\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has landed before $t$, $\forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, \omega \in \Omega$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(Z_{ft}^\omega\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has been cancelled before $t$, $\forall f \in \mathcal{F}_1, t \in \mathcal{T}, \omega \in \Omega$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(E_{ft}^\omega\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has taken off before $t$, $\forall f \in \mathcal{F}_3, t \in \mathcal{T}, \omega \in \Omega$\\
+		0 & otherwise\\
+		\end{cases*}\)\\
+		\(EZ_{ft}^\omega\) & \(\qquad = \) & \( \begin{cases*}
+		1 & if the flight $f$ has been cancelled before $t$, $\forall f \in \mathcal{F}_3, t \in \mathcal{T}, \omega \in \Omega$\\
+		0 & otherwise\\
+		\end{cases*}\)	
+	\end{longtable}
+	\begin{align}
+		\min \quad & \sum_{\omega \in \Omega} p^\omega \bigg[ \sum_{f \in \mathcal{F}_1} \left(\sum_{t = S_f}^T g_{ft}(D_{ft}^\omega - D_{f(t-1)}^\omega) + \sum_{t = 1}^T c_{ft}(Z_{ft}^\omega - Z_{f(t-1)}^\omega) \right)\\
+		& +\sum_{f \in \mathcal{F}}\sum_{t = S_f+\tau_f}^T a_{f}(L_{ft}^\omega - Y_{ft}^\omega) + \sum_{f \in \mathcal{F}_3} \sum_{t = O_f}^{T} \left(o_{f}(E_{ft}^\omega - E_{f(t-1)}^\omega) + \sum_{f \in \mathcal{F}_3} c_{ft}(EZ_{ft}^\omega - EZ_{f(t-1)}^\omega)\right) \bigg]\\
+		\text{s.t.} \quad &  Y_{fT}^\omega + Z_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_1, \omega \in \Omega\\
+		& Y_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, \omega \in \Omega\\
+		& E_{fT}^\omega + EZ_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_3, \omega \in \Omega\\
+		& Z_{ft}^\omega + D_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_1, t \in \mathcal{T}, \omega \in \Omega\\
+		& E_{ft}^\omega + EZ_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_3, t \in \mathcal{T}, \omega \in \Omega\\
+		& Y_{ft}^\omega \leq L_{ft}^\omega \qquad \qquad \forall f \in \mathcal{F}, t \in \mathcal{T}, \omega \in \Omega\\
+		& X_{ft}^\omega = D_{f(t+N)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T-N\}, \omega \in \Omega\\
+		& D_{ft}^\omega = L_{f(t + \tau_f)}^\omega \qquad \qquad f \in \mathcal{F}_1, t \in \{1, \dots, T - \tau_{f}\}, \omega \in \Omega\\
+		& \sum_{f \in \mathcal{F}}\left(Y_{ft}^\omega - Y_{f(t-1)}^\omega\right) \leq CA_{t}^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \\
+		& \sum_{f \in \mathcal{F}_3}\left(E_{ft}^\omega - E_{f(t-1)}^\omega\right) \leq CD_{t}^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \\
+		& \sum_{f \in \mathcal{F}}\left(Y_{ft}^\omega - Y_{f(t-1)}^\omega\right) + \sum_{f \in \mathcal{F}_3}\left(E_{ft}^\omega - E_{f(t-1)}^\omega\right) \leq CT_t^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \\
+		& X_{ft}^\omega \geq X_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{S_f - N, \dots, T\}, \omega \in \Omega\\
+		& Y_{ft}^\omega \geq Y_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, \omega \in \Omega\\
+		& Z_{ft}^\omega \geq Z_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T\}, \omega \in \Omega\\
+		& E_{ft}^\omega \geq E_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_3, t \in \{1, \dots, T\}, \omega \in \Omega\\
+		& EZ_{ft}^\omega \geq EZ_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_3, t \in \{1, \dots, T\}, \omega \in \Omega\\
+		& L_{ft}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{S_f+\tau_f, \dots, T\}, \omega \in \Omega\\
+		& L_{ft}^\omega = 0 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{0, \dots, S_f+\tau_f-1\}, \omega \in \Omega\\
+		& X_{ft}^\omega = X_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{S_f - N, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i\\
+		& Y_{ft}^\omega = Y_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i\\
+		& Z_{ft}^\omega = Z_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i
+	\end{align}
+	%The issue with this model is that the block diagonal property, which is the key to decompose the problem using Benders decomposition, is lost due to the time-lagging constraints on variable \(X\). It does not mean that this model is not solvable, but it is really hard. We have to relax the constraints on \(X\) to obtain the decomposable structure (similar to the philosophy of progressive hedging) and even then we are not sure whether the problem could be solved with an efficient method.
+	
+\section{Solution Methods}
+	The model in Section~\ref{Model} is the extensive formulation of a multistage stochastic integer program. It is a class of non-convex mathematical program that involves uncertainty and it is extremely hard to solve. Stochastic dual dynamic program (SDDP) is developed by Pereira and Pinto (1990) for a multistage stochastic program with exogenous information interstage-independent. The algorithm uses the piecewise linear nature of the cost-to-go function to iteratively generate Benders cuts to approximate it.\\
+	\newline Ahmed et al. (2016) presents a solution method to the multistage stochastic integer program with only binary variables. Instead of the linear Benders type cut, they propose to solve the Lagrangian relaxation of the stage problem and generate Lagrangian cuts and strengthened Benders cuts. These cuts, accompanied with the integer L-shape cuts proposed by Laporte and Louveax (1993), can significantly improve the computational performance.\\
+	\newline The next step of the project is to implement the cuts proposed by Ahmed et al. and check the convergence results and time. With the solution provided by SDDP, we could do a series of back simulation, altering the parameters of the model to examine the effect of decision lag time, the horizon of stochasticity, and so on. We could also further implement a parallelized version of the SDDP algorithm.
+	
+\section{Computational Results}
+
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{gdp_model}
+
+\end{document}
