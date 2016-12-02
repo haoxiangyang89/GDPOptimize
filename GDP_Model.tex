@@ -34,11 +34,14 @@
 	\end{itemize}
 
 \section{An Equivalent Stochastic Integer Program Formulation}\label{Model}
-	In this section we construct a multi-stage stochastic integer program to model GDP mathematically, using the prediction result from Section~\ref{Prediction} to model the airport capacity. We assume that at each time period, the airport capacity of each following time period is a random variable with the distribution given by the prediction result. \\
-	\newline Here we assume the decision make is solving the stochastic program every time period. Suppose we have a finite number of scenarios (even it may be really large) and we denote each scenario as \(\omega \in \Omega\). The uncertainty parameters \(\xi\) include the arrival capacity following the time period \(t\). We can write down the formulation of this multi-stage stochastic integer program of time period \(t\) as follows:
+	In this section we construct a multi-stage stochastic integer program to model GDP mathematically. A structure of the problem will be discussed first and a mathematic programming formulation will be displayed. In this paper, the single airport where the optimization is applied is called a target airport.\\
+	% endogenous decsions and problem structure
+	\newline There are three categories of flights considered in our problem: non-exempted inbound flights that will arrive at the target airport, exempted inbound flights that usually have a long flight length, and outbound flights that will take off from the target airport. We divide a typical day into 48 time periods (half an hour as a time period). For each time period, the decisions to make include whether an inbound plane should be cleared to take off in \(N\) time periods, or be canceled, whether an arriving plane should land at this current time period, and whether an outbound plane should take off or be canceled. Here we set up the concept of \(N\) time periods between the clearance time and the take-off time for a flight to approximate the reality. This means in our model, each flight has to be given a clearance time \(N\) time periods before its take-off time. There are plenty of work done for the airport runway/gate management. In this paper we do not look into this micro-scope management, which means as long as the capacity constraints are met, we assume it is always feasible in terms of crews, gates or other factors on the ground.\\
+	\newline % exogenous information
+	We assume that at each time period, the airport capacity of each following time period is a random variable with the distribution given by the prediction result. Suppose we have a finite number of scenarios (even it may be really large) and we denote each scenario as \(\omega \in \Omega\). The uncertainty parameters \(\xi\) include the arrival capacity following the time period \(t\). We can write down the formulation of this multi-stage stochastic integer program of time period \(t\) as follows:
 	\begin{longtable}[H]{l l l}
 		Set and Parameters & &\\
-		\(\mathcal{F} = \mathcal{F}_1 \cup \mathcal{F}_2\) & \(\qquad\)& set of flights\\
+		\(\mathcal{F} = \mathcal{F}_1 \cup \mathcal{F}_2\) & \(\qquad\)& set of inbound flights\\
 		\(\mathcal{F}_1\) & \(\qquad\)& set of flights that are not exempted\\
 		\(\mathcal{F}_2\) & \(\qquad\)& set of flights that are exempted\\
 		\(\mathcal{F}_3\) & \(\qquad\)& set of flights that originate from the researched airport\\
