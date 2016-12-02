@@ -2,7 +2,7 @@
 
 %opening
 \title{Ground Delay Program Planning: A Dynamic Programming Approach}
-\author{Haoxiang Yang}
+\author{Haoxiang Yang, Kenneth Kuhn}
 \date{7/11/2016}
 \usepackage[margin=0.5in,tmargin = 1in, bmargin = 1in]{geometry}
 \usepackage{enumitem}
@@ -16,6 +16,7 @@
 \usepackage{sidecap}
 \usepackage{float}
 \usepackage{longtable}
+\usepackage{color}
 \allowdisplaybreaks
 
 \begin{document}
@@ -23,29 +24,33 @@
 \maketitle
 
 \section{Introduction}
-	In air traffic control, one of the most used and most effective strategy is the ground delay program. Describe what GDP is. List what decisions ATM has to make.\\
+	In air traffic control, one of the most used and most effective strategy is the ground delay program. \textcolor{blue}{Describe what GDP is. List what decisions ATM has to make.\\
 	\newline Literature review about: 1. optimizing GDP using static optimization; 2. optimizing GDP using stochastic optimization; 3. optimizing GDP using heuristics; 4. airport capacity estimation/prediction;\\
-	\newline Structure of the paper;
+	\newline Structure of the paper;}
 \section{Weather Forecasts and Airport Capacity Prediction}\label{Prediction}
-	Here we can put stuff about the capacity prediction.
+	\textcolor{blue}{Here we can put stuff about the capacity prediction.
 	\begin{itemize}
 		\item What factors affect the airport capacity?
 		\item The method we used to predict the airport capacity
 	\end{itemize}
+	}
 
 \section{An Equivalent Stochastic Integer Program Formulation}\label{Model}
 	In this section we construct a multi-stage stochastic integer program to model GDP mathematically. A structure of the problem will be discussed first and a mathematic programming formulation will be displayed. In this paper, the single airport where the optimization is applied is called a target airport.\\
 	% endogenous decsions and problem structure
-	\newline There are three categories of flights considered in our problem: non-exempted inbound flights that will arrive at the target airport, exempted inbound flights that usually have a long flight length, and outbound flights that will take off from the target airport. We divide a typical day into 48 time periods (half an hour as a time period). For each time period, the decisions to make include whether an inbound plane should be cleared to take off in \(N\) time periods, or be canceled, whether an arriving plane should land at this current time period, and whether an outbound plane should take off or be canceled. Here we set up the concept of \(N\) time periods between the clearance time and the take-off time for a flight to approximate the reality. This means in our model, each flight has to be given a clearance time \(N\) time periods before its take-off time. There are plenty of work done for the airport runway/gate management. In this paper we do not look into this micro-scope management, which means as long as the capacity constraints are met, we assume it is always feasible in terms of crews, gates or other factors on the ground.\\
+	\newline There are three categories of flights considered in our problem: non-exempted inbound flights that will arrive at the target airport, exempted inbound flights that usually have a long flight length, and outbound flights that will take off from the target airport. \textcolor{blue}{Last time period.} We divide a typical day into 48 time periods (half an hour as a time period). For each time period, the decisions to make at each time period include whether an inbound plane should be cleared to take off in \(N\) time periods, or be canceled, whether an arriving plane should land at this current time period, and whether an outbound plane should take off or be canceled. We distinguish  arrival from landing in our model to record airborne cost. An inbound flight can arrive at the airport but could not be granted permission to land. Here we set up the concept of \(N\) time periods between the clearance time and the take-off time for a flight to approximate the reality. This means in our model, each flight has to be given a clearance time \(N\) time periods before its take-off time. There are plenty of work done for the airport runway/gate management. In this paper we do not look into this micro-scope management, which means as long as the capacity constraints are met, we assume it is always feasible in terms of crews, gates or other factors on the ground.\\
 	\newline % exogenous information
-	We assume that at each time period, the airport capacity of each following time period is a random variable with the distribution given by the prediction result. Suppose we have a finite number of scenarios (even it may be really large) and we denote each scenario as \(\omega \in \Omega\). The uncertainty parameters \(\xi\) include the arrival capacity following the time period \(t\). We can write down the formulation of this multi-stage stochastic integer program of time period \(t\) as follows:
+	We assume that at each time period, the airport capacity of each following time period is a random variable with the distribution given by the prediction result. The probability distribution comes from Section~\ref{Prediction}. Suppose we have a finite number of scenarios over the entire timespan (even it may be really large), since we have discretized the weather condition of each time period into categories, and we denote each scenario as \(\omega \in \Omega\). The uncertainty parameters \(\xi\) include landing capacity, taking-off capacity and total action capacity (landing plus taking-off) of time period \(t\). \\
+	\newline % cost information
+	Costs of operations include the following items. For a non-exempted inbound flight, it may incur a ground delay cost due to occupancy of resources (crew, gate, etc.), and a cancellation cost for inconvenience caused for travelers and airlines. For every inbound flight it is possible to incur a airborne cost. On the other side of the operation, each outbound flight may be delayed on the ground (taxi out) or canceled, which would incur different types of costs. \textcolor{blue}{How do we decide the costs? We probably need to decide on some concrete numbers based on the past literature.} \\
+	\newline We can write down the formulation of this multi-stage stochastic integer program of time period \(t\) as follows:
 	\begin{longtable}[H]{l l l}
 		Set and Parameters & &\\
 		\(\mathcal{F} = \mathcal{F}_1 \cup \mathcal{F}_2\) & \(\qquad\)& set of inbound flights\\
-		\(\mathcal{F}_1\) & \(\qquad\)& set of flights that are not exempted\\
-		\(\mathcal{F}_2\) & \(\qquad\)& set of flights that are exempted\\
-		\(\mathcal{F}_3\) & \(\qquad\)& set of flights that originate from the researched airport\\
-		\(T\) & \(\qquad\) & length of planning horizon\\
+		\(\mathcal{F}_1\) & \(\qquad\)& set of inbound flights that are non-exempted\\
+		\(\mathcal{F}_2\) & \(\qquad\)& set of inbound flights that are exempted\\
+		\(\mathcal{F}_3\) & \(\qquad\)& set of outbound flights that originate from the researched airport\\
+		\(T\) & \(\qquad\) & time horizon\\
 		\(\mathcal{T} = \{1, \dots,T\}\) & \(\qquad\) & set of time periods\\
 		\(\Omega\) & \(\qquad\) & set of scenarios\\
 		\(B\) & \(\qquad\) & number of scenario partitions \\
@@ -96,14 +101,16 @@
 	\begin{align}
 		\min \quad & \sum_{\omega \in \Omega} p^\omega \bigg[ \sum_{f \in \mathcal{F}_1} \left(\sum_{t = S_f}^T g_{ft}(D_{ft}^\omega - D_{f(t-1)}^\omega) + \sum_{t = 1}^T c_{ft}(Z_{ft}^\omega - Z_{f(t-1)}^\omega) \right)\\
 		& +\sum_{f \in \mathcal{F}}\sum_{t = S_f+\tau_f}^T a_{f}(L_{ft}^\omega - Y_{ft}^\omega) + \sum_{f \in \mathcal{F}_3} \sum_{t = O_f}^{T} \left(o_{f}(E_{ft}^\omega - E_{f(t-1)}^\omega) + \sum_{f \in \mathcal{F}_3} c_{ft}(EZ_{ft}^\omega - EZ_{f(t-1)}^\omega)\right) \bigg]\\
-		\text{s.t.} \quad &  Y_{fT}^\omega + Z_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_1, \omega \in \Omega\\
-		& Y_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, \omega \in \Omega\\
+		\text{s.t.} \quad &  Y_{fT}^\omega + Z_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_1, \omega \in \Omega \label{cancelORfly}\\
+		& Z_{ft}^\omega + D_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_1, t \in \mathcal{T}, \omega \in \Omega \label{cancelORplan}\\
+		& X_{ft}^\omega = D_{f(t+N)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T-N\}, \omega \in \Omega \label{planahead}\\
+		& D_{ft}^\omega = L_{f(t + \tau_f)}^\omega \qquad \qquad f \in \mathcal{F}_1, t \in \{1, \dots, T - \tau_{f}\}, \omega \in \Omega \label{depLag}\\
+		& Y_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, \omega \in \Omega \label{mustLand}\\
+		& L_{ft}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{S_f+\tau_f, \dots, T\}, \omega \in \Omega \label{mustArr}\\
+		& L_{ft}^\omega = 0 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{0, \dots, S_f+\tau_f-1\}, \omega \in \Omega \label{cannotArr}\\
+		& Y_{ft}^\omega \leq L_{ft}^\omega \qquad \qquad \forall f \in \mathcal{F}, t \in \mathcal{T}, \omega \in \Omega \label{arrland}\\
 		& E_{fT}^\omega + EZ_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_3, \omega \in \Omega\\
-		& Z_{ft}^\omega + D_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_1, t \in \mathcal{T}, \omega \in \Omega\\
 		& E_{ft}^\omega + EZ_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_3, t \in \mathcal{T}, \omega \in \Omega\\
-		& Y_{ft}^\omega \leq L_{ft}^\omega \qquad \qquad \forall f \in \mathcal{F}, t \in \mathcal{T}, \omega \in \Omega\\
-		& X_{ft}^\omega = D_{f(t+N)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T-N\}, \omega \in \Omega\\
-		& D_{ft}^\omega = L_{f(t + \tau_f)}^\omega \qquad \qquad f \in \mathcal{F}_1, t \in \{1, \dots, T - \tau_{f}\}, \omega \in \Omega\\
 		& \sum_{f \in \mathcal{F}}\left(Y_{ft}^\omega - Y_{f(t-1)}^\omega\right) \leq CA_{t}^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \\
 		& \sum_{f \in \mathcal{F}_3}\left(E_{ft}^\omega - E_{f(t-1)}^\omega\right) \leq CD_{t}^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \\
 		& \sum_{f \in \mathcal{F}}\left(Y_{ft}^\omega - Y_{f(t-1)}^\omega\right) + \sum_{f \in \mathcal{F}_3}\left(E_{ft}^\omega - E_{f(t-1)}^\omega\right) \leq CT_t^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \\
@@ -112,19 +119,17 @@
 		& Z_{ft}^\omega \geq Z_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T\}, \omega \in \Omega\\
 		& E_{ft}^\omega \geq E_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_3, t \in \{1, \dots, T\}, \omega \in \Omega\\
 		& EZ_{ft}^\omega \geq EZ_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_3, t \in \{1, \dots, T\}, \omega \in \Omega\\
-		& L_{ft}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{S_f+\tau_f, \dots, T\}, \omega \in \Omega\\
-		& L_{ft}^\omega = 0 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{0, \dots, S_f+\tau_f-1\}, \omega \in \Omega\\
 		& X_{ft}^\omega = X_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{S_f - N, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i\\
 		& Y_{ft}^\omega = Y_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i\\
 		& Z_{ft}^\omega = Z_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i
 	\end{align}
-	%The issue with this model is that the block diagonal property, which is the key to decompose the problem using Benders decomposition, is lost due to the time-lagging constraints on variable \(X\). It does not mean that this model is not solvable, but it is really hard. We have to relax the constraints on \(X\) to obtain the decomposable structure (similar to the philosophy of progressive hedging) and even then we are not sure whether the problem could be solved with an efficient method.
+	The objective of the optimization problem is to minimize expected total cost, including costs for each inbound and outbound flight. For a non-exempted inbound flight, it would either land or be canceled at the end of the time span (Constraint \ref{cancelORfly}), and it cannot take off when it is canceled (Constraint \ref{cancelORplan}). Constraint \ref{planahead} and \ref{depLag} determine its clearance time, departure time and arrival time. Constraint \ref{mustLand} - \ref{cannotArr} specify arrival/landing time limitations for exempted inbound flights.
 	
 \section{Solution Methods}
 	The model in Section~\ref{Model} is the extensive formulation of a multistage stochastic integer program. It is a class of non-convex mathematical program that involves uncertainty and it is extremely hard to solve due to its size. To solve this problem, we combine the modeling effort with recently developed optimization tools.\\
 	\newline Stochastic dual dynamic program (SDDP) is developed by \cite{pereira1991multi} for a multistage stochastic linear program with exogenous information interstage-independent. The algorithm uses the piecewise linear nature of the cost-to-go function to iteratively generate Benders cuts to approximate it.\\
 	\newline \cite{zou2016nested} presents a solution method to the multistage stochastic integer program with only binary variables. Instead of the linear Benders type cut, they propose to solve the Lagrangian relaxation of the stage problem and generate Lagrangian cuts and strengthened Benders cuts. These cuts, accompanied with the integer L-shape cuts proposed by \cite{laporte1993integer}, can significantly improve the computational performance.\\
-	\newline Each stage of the problem can be displayed as follows.
+	\newline \textcolor{blue}{Each stage of the problem can be displayed as follows.}
 	
 	
 \section{Computational Results}
