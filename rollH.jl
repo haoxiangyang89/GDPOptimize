@@ -143,6 +143,7 @@ end
 
 function genCap(mg,ct,gT,capD,probD)
     # return M sample paths
+    # gT is the number of time periods simulated
     # plain MC simulation
     scenList = zeros(mg,gT);
     probMat = rand(Uniform(0,1),mg,gT);

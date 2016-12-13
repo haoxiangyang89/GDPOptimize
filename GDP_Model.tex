@@ -17,6 +17,7 @@
 \usepackage{float}
 \usepackage{longtable}
 \usepackage{color}
+\usepackage[]{algorithm2e}
 \allowdisplaybreaks
 
 \begin{document}
@@ -99,7 +100,7 @@
 		\end{cases*}\)	
 	\end{longtable}
 	\begin{align}
-		\min \quad & \sum_{\omega \in \Omega} p^\omega \bigg[ \sum_{f \in \mathcal{F}_1} \left(\sum_{t = S_f}^T g_{ft}(D_{ft}^\omega - D_{f(t-1)}^\omega) + \sum_{t = 1}^T c_{ft}(Z_{ft}^\omega - Z_{f(t-1)}^\omega) \right)\\
+		\min \quad & \sum_{\omega \in \Omega} p^\omega \bigg[ \sum_{f \in \mathcal{F}_1} \left(\sum_{t = S_f}^T g_{ft}(D_{ft}^\omega - D_{f(t-1)}^\omega) + \sum_{t = 1}^T c_{ft}(Z_{ft}^\omega - Z_{f(t-1)}^\omega) \right) \nonumber\\
 		& +\sum_{f \in \mathcal{F}}\sum_{t = S_f+\tau_f}^T a_{f}(L_{ft}^\omega - Y_{ft}^\omega) + \sum_{f \in \mathcal{F}_3} \sum_{t = O_f}^{T} \left(o_{f}(E_{ft}^\omega - E_{f(t-1)}^\omega) + \sum_{f \in \mathcal{F}_3} c_{ft}(EZ_{ft}^\omega - EZ_{f(t-1)}^\omega)\right) \bigg]\\
 		\text{s.t.} \quad &  Y_{fT}^\omega + Z_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_1, \omega \in \Omega \label{cancelORfly}\\
 		& Z_{ft}^\omega + D_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_1, t \in \mathcal{T}, \omega \in \Omega \label{cancelORplan}\\
@@ -123,7 +124,7 @@
 		& Y_{ft}^\omega = Y_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i\\
 		& Z_{ft}^\omega = Z_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i
 	\end{align}
-	The objective of the optimization problem is to minimize expected total cost, including costs for each inbound and outbound flight. For a non-exempted inbound flight, it would either land or be canceled at the end of the time span (Constraint \ref{cancelORfly}), and it cannot take off when it is canceled (Constraint \ref{cancelORplan}). Constraint \ref{planahead} and \ref{depLag} determine its clearance time, departure time and arrival time. Constraint \ref{mustLand} - \ref{cannotArr} specify arrival/landing time limitations for exempted inbound flights.
+	The objective of the optimization problem is to minimize expected total cost, including costs for each inbound and outbound flight. For a non-exempted inbound flight, it would either land or be canceled at the end of the time span (Constraint (\ref{cancelORfly})), and it cannot take off when it is canceled (Constraint (\ref{cancelORplan})). Constraint (\ref{planahead}) and (\ref{depLag}) determine its clearance time, departure time and arrival time. Constraint \ref{mustLand} - \ref{cannotArr} specify arrival/landing time limitations for exempted inbound flights.
 	
 \section{Solution Methods}
 	The model in Section~\ref{Model} is the extensive formulation of a multistage stochastic integer program. It is a class of non-convex mathematical program that involves uncertainty and it is extremely hard to solve due to its size. To solve this problem, we combine the modeling effort with recently developed optimization tools.\\
@@ -131,7 +132,7 @@
 	\newline \cite{zou2016nested} presents a solution method to the multistage stochastic integer program with only binary variables. Instead of the linear Benders type cut, they propose to solve the Lagrangian relaxation of the stage problem and generate Lagrangian cuts and strengthened Benders cuts. These cuts, accompanied with the integer L-shape cuts proposed by \cite{laporte1993integer}, can significantly improve the computational performance.\\
 	\newline At time period \(t\), let us denote the variables that record the state of being cleared for each flight be \(\mathbf{H}_{ft}\), which is a vector of 0/1 to record whether flight \(f\) has taken off. This vector has a length of \(N + \tau_f\) in order to keep a full history. In addition, we should establish state variables for landing \(V_{ft}\), departure \(W_{ft}\) and cancellation \(U_{ft}\). We can write down the problem for the time period \(t\) as follows:
 	\begin{align}
-		\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_f - HD_f) + c_{ft} (Z_f - HZ_f) \right] + \sum_{f \in \mathcal{F}} \left[ a_f (L_f - Y_f)\right] + &\\
+		(M_t)\quad \min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_f - HD_f) + c_{ft} (Z_f - HZ_f) \right] + \sum_{f \in \mathcal{F}} \left[ a_f (L_f - Y_f)\right] + & \nonumber \\
 		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_f - HE_f) + c_{ft}(EZ_f - HEZ_f)\right] + \sum_{\omega \in \Omega_t} p^\omega \theta^\omega &\\
 		\text{s.t.} \quad & Z_f + D_f \leq 1 & \forall f \in \mathcal{F}_1\\
 		& E_f + EZ_f \leq 1 & \forall f \in \mathcal{F}_3\\
@@ -146,8 +147,8 @@
 		& EZ_f \geq HEZ_f & \forall f \in \mathcal{F}_3\\
 		& \text{Make a local copy of the states variables}& \label{inheritCon}\\
 		& \text{Record the state variables}& \label{passDown}\\
-		& \theta^\omega \geq \sum_{f \in \mathcal{F}_1} \mathbf{\pi}_{H,f}^{\omega,k,t,f} (\mathbf{H}_{ft} - \hat{\mathbf{H}}_{ft}) + \sum_{f \in \mathcal{F}}\pi_{V}^{\omega,k,t,f} (V_{ft} - \hat{V}_{ft}) &\\
-		& + \sum_{f \in \mathcal{F}_3} \pi_{W}^{\omega,k,t,f} (W_{ft} - \hat{W}_{ft}) + \sum_{f \in \mathcal{F}_1 \cup \mathcal{F}_3} \pi_{U}^{\omega,k,t,f} (U_{ft} - \hat{U}_{ft}) & \forall \omega \in \Omega_t
+		& \theta^\omega \geq \sum_{f \in \mathcal{F}_1} \mathbf{\pi}_{H,f}^{\omega,k,t,f} (\mathbf{H}_{ft} - \hat{\mathbf{H}}_{ft}) + \sum_{f \in \mathcal{F}}\pi_{V}^{\omega,k,t,f} (V_{ft} - \hat{V}_{ft}) & \nonumber\\
+		& + \sum_{f \in \mathcal{F}_3} \pi_{W}^{\omega,k,t,f} (W_{ft} - \hat{W}_{ft}) + \sum_{f \in \mathcal{F}_1 \cup \mathcal{F}_3} \pi_{U}^{\omega,k,t,f} (U_{ft} - \hat{U}_{ft}) + \hat{Q}^{\omega,k,t} & \forall \omega \in \Omega_t
 	\end{align}
 	In this problem, \(HX,HD,HY,HL,HZ,HE,HEZ\) are all local variables. Constraint Set (\ref{inheritCon}) is used to set up the local copy in the following way:
 	\begin{align*}
@@ -168,7 +169,11 @@
 		& U_{f,t} = Z_f & \forall f \in \mathcal{F}_1\\
 		& U_{f,t} = EZ_f & \forall f \in \mathcal{F}_3
 	\end{align*}
-	
+	The algorithm to solve this multi-stage stochastic integer program is displayed as follows:\\
+	\begin{algorithm}[H]
+		
+	\end{algorithm}
+	\noindent If we implement a vanilla version of SDDiP to solve this problem, we will solve a problem with 48 stages, with each stage being a large-scale MIP. 
 \section{Computational Results}
 
 \nocite{*}
