@@ -447,29 +447,39 @@ function updateCut(t,Ome,probDict,probDict,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,vList,
     push!(vList[t],vsum);
 end
 
+function getCapDict(M,dT,dA,dD)
+    totalCapDict = Dict();
+#    totalCapDict = Dict(1=>107,2=>97,3=>92,4=>84,
+#                    5=>65,6=>59,7=>56,8=>51,
+#                    9=>25,10=>23,11=>21,12=>20,
+#                    13=>90,14=>82,15=>77,16=>71,
+#                    17=>85,18=>77,19=>73,20=>67,
+#                    21=>15,22=>14,23=>13,24=>12,
+#                    25=>55,26=>50,27=>47,28=>43,
+#                    29=>21,30=>19,31=>18,32=>16,
+#                    33=>71,34=>64,35=>61,36=>56,
+#                    37=>13,38=>12,39=>11,40=>10);
+    ArrCapDict = Dict();
+    DeptCapDict = Dict();
+    for i in 1:M
+        totalCapDict[i] = dT[i];
+        ArrCapDict[i] = dA[i];
+        DeptCapDict[i] = dD[i];
+#        ArrCapDict[i] = round(totalCapDict[i]*60/107);
+#        DeptCapDict[i] = round(totalCapDict[i]*70/107);
+    end
+    return totalCapDict,ArrCapDict,DeptCapDict
+end
+
 function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probDict)
     # this is the function that carries out the SDDP and output the solution
 
     # one to one mapping between scenario and capacity
-    totalCapDict = Dict(1=>107,2=>97,3=>92,4=>84,
-                    5=>65,6=>59,7=>56,8=>51,
-                    9=>25,10=>23,11=>21,12=>20,
-                    13=>90,14=>82,15=>77,16=>71,
-                    17=>85,18=>77,19=>73,20=>67,
-                    21=>15,22=>14,23=>13,24=>12,
-                    25=>55,26=>50,27=>47,28=>43,
-                    29=>21,30=>19,31=>18,32=>16,
-                    33=>71,34=>64,35=>61,36=>56,
-                    37=>13,38=>12,39=>11,40=>10);
-    ArrCapDict = Dict();
-    DeptCapDict = Dict();
-    for i in 1:40
-        ArrCapDict[i] = round(totalCapDict[i]*60/107);
-        DeptCapDict[i] = round(totalCapDict[i]*70/107);
-    end
+    totalCapDict,ArrCapDict,DeptCapDict = getCapDict(3,[6,5,3],[4,3,2],[4,3,2]);
 
     # set up the default solver as CbcSolver
-    solver = CbcSolver(seconds = 9000);
+    #solver = CbcSolver(seconds = 9000);
+    solver = CplexSolver();
     ub = 10000000000;
     lb = 0;
     iterNo = 0;
