@@ -210,11 +210,12 @@ function solveStoch(currentT,T,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capA,capD,capT
         end);
 
     # add the non-anticipativity constraints
-    @constraint(md,nonAntiX[f in FSM1,t in TSet,m in 1:M], X[f,t,m] == X[f,t,connMat[m,t]+1]);
-    @constraint(md,nonAntiY[f in FSM,t in TSet,m in 1:M], Y[f,t,m] == Y[f,t,connMat[m,t]+1]);
-    @constraint(md,nonAntiZ[f in FSM1,t in TSet,m in 1:M], Z[f,t,m] == Z[f,t,connMat[m,t]+1]);
-    @constraint(md,nonAntiE[f in FSM3,t in TSet,m in 1:M], E[f,t,m] == E[f,t,connMat[m,t]+1]);
-    @constraint(md,nonAntiEZ[f in FSM3,t in TSet,m in 1:M], EZ[f,t,m] == EZ[f,t,connMat[m,t]+1]);
+    # original version with the third component is connMat[m,t]+1
+    @constraint(md,nonAntiX[f in FSM1,t in TSet,m in 1:M], X[f,t,m] == X[f,t,connMat[m,t]]);
+    @constraint(md,nonAntiY[f in FSM,t in TSet,m in 1:M], Y[f,t,m] == Y[f,t,connMat[m,t]]);
+    @constraint(md,nonAntiZ[f in FSM1,t in TSet,m in 1:M], Z[f,t,m] == Z[f,t,connMat[m,t]]);
+    @constraint(md,nonAntiE[f in FSM3,t in TSet,m in 1:M], E[f,t,m] == E[f,t,connMat[m,t]]);
+    @constraint(md,nonAntiEZ[f in FSM3,t in TSet,m in 1:M], EZ[f,t,m] == EZ[f,t,connMat[m,t]]);
 
     # solve the deterministic model
     status = solve(m);
@@ -363,7 +364,7 @@ function Main_Stoch(ArrAdd,DeptAdd,capAdd,N,outArrAdd,outDeptAdd,connAdd)
     for currentT in 1:T
         println(currentT);
         FS1E,FS2E,FS2EY,FS2EZ,FS3E,FS3EZ,RSet,CSCost[currentT],CSgdpCost[currentT],CSabCost[currentT],CStxCost[currentT],CSccCost[currentT] =
-            solveStoch(currentT,T,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capA,capD,capT,connMat);
+            solveStoch(currentT,T,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capA,capD,capT,connMat);
         for f in FS1E
             Xtime[f] = currentT;
             Dtime[f] = currentT+N;
