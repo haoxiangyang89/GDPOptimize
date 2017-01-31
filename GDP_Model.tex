@@ -199,12 +199,15 @@
 		& U_{f,t} = Z_f & \forall f \in \mathcal{F}_1\\
 		& U_{f,t} = EZ_f & \forall f \in \mathcal{F}_3
 	\end{align*}
-	The algorithm to solve this multi-stage stochastic integer program is displayed as follows:\\
+	\textcolor{blue}{The algorithm to solve this multi-stage stochastic integer program is displayed as follows:\\
 	\begin{algorithm}[H]
-		
-	\end{algorithm}
-	\noindent If we implement a vanilla version of SDDiP to solve this problem, we will solve a problem with 48 stages, with each stage being a large-scale MIP. 
-\section{Experimental Results}
+		aa
+	\end{algorithm}}
+	\noindent If we implement a vanilla version of SDDiP to solve this problem, we will solve a problem with 48 stages, with each stage being a large-scale MIP. This may not be computationally feasible in real-world application, as shown in Section~\ref{expResults}. We seek for other techniques to improve the computational performance of our vanilla SDDP algorithm.\\
+	\newline
+	\textcolor{blue}{Rolling Horizon Scheme}\\
+	\textcolor{blue}{Other heuristics to accelerate the process}
+\section{Experimental Results}\label{expResults}
 
 \nocite{*}
 \bibliographystyle{plain}
