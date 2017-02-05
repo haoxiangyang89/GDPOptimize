@@ -5,22 +5,27 @@ function generateCost(ct,tt,LC,S,TS,FSG1,FSG2,FSG3,FSG)
     a = Dict();
     c = Dict();
     tc = Dict();
+    cz = Dict();
+    r = Dict();
     # this is the functiono that generates all the costs
     for t in ct:tt
+        for f in FSG
+            r[f] = 40;
+        end
         # generate the ground delay cost and airborne delay cost for planes that have not been cleared
         for f in FSG1
             if t > S[f]
-                g[f,t] = 1.1^(t - S[f]);
+                g[f,t] = 1.35^(t - S[f]);
             else
                 g[f,t] = 0;
             end
             a[f] = 5;
-            c[f,t] = max(0,20 - g[f,t]);
+            c[f,t] = 20;
         end
         # generate the ground delay cost and airborne delay cost for planes that have been cleared or exempted
         for f in FSG2
             if (t > S[f])&&(ct < S[f])
-                g[f,t] = 1.3^(t - S[f]);
+                g[f,t] = 1.35^(t - S[f]);
             else
                 g[f,t] = 0;
             end
@@ -29,13 +34,14 @@ function generateCost(ct,tt,LC,S,TS,FSG1,FSG2,FSG3,FSG)
         # generate the taxi-out cost for planes to depart
         for f in FSG3
             if (t > TS[f])
-                tc[f,t] = 1.3^(t - TS[f]);
+                tc[f,t] = 1.5^(t - TS[f]);
             else
                 tc[f,t] = 0;
             end
+            cz[f,t] = 20;
         end
     end
-    return g,a,c,tc
+    return g,a,c,tc,cz,r
 end
 function initiMain(capAddress,capProbAdd,ArrAdd,DeptAdd,totalT,N)
     # this is the function that initiates the rolling horizon process
@@ -54,9 +60,9 @@ function initiMain(capAddress,capProbAdd,ArrAdd,DeptAdd,totalT,N)
         capTemp = [];
         probTemp = [];
         for j in capacity_info_txt[t,2:length(capacity_info_txt[t,:])]
-            if (typeof(j) == Int)
-                push!(capTemp,j);
-            end
+            #if (typeof(j) == Int)
+            push!(capTemp,Int(j));
+            #end
         end
         for j in capacity_prob_txt[t,2:length(capacity_prob_txt[t,:])]
             if (typeof(j) == Float64)||(typeof(j) == Int)
@@ -151,6 +157,9 @@ end
 
 function initPre(totalT,currentT,M,FSIP1,FSIP2,FSIP3,FSIP)
     # set up the initial values of X,Y,Z,D,E,L
+    # first component is the thread number
+    # the second number is the flight number
+    # the third number is the time
     Xp = Dict();
     Yp = Dict();
     Zp = Dict();
@@ -330,6 +339,8 @@ end
 
 function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probDict)
     # this is the function that carries out the SDDP and output the solution
+    # totalT is the entire horizon, T is the length of the rolling horizon
+    # N is the lag of decision, M is the number of threads
 
     # one to one mapping between scenario and capacity
 #    totalCapDict = Dict(1=>107,2=>97,3=>92,4=>84,
@@ -361,7 +372,7 @@ function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probD
     iterNo = 0;
     ϵ = 0.05;
     # generate costs based on their scheduled departure
-    gM,aM,cM,tcM = generateCost(currentT,totalT,LC,S,TS,FSM1,FSM2,FSM3,FSM);
+    gM,aM,cM,tcM,czM,rM = generateCost(currentT,totalT,LC,S,TS,FSM1,FSM2,FSM3,FSM);
     # need a variable to store the cut coefficient!!!!!!!!!!!!!
     cutDict = Dict();
 
