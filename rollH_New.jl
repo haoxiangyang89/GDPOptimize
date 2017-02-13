@@ -186,6 +186,8 @@ function initPre(totalT,currentT,M,FSIP1,FSIP2,FSIP3,FSIP)
 end
 
 function createTail(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gC,aC,cC,tcC,CR)
+    # this function should create the problem structure of every time period from ct + T + 1 to totalT
+    # it shoud leave the capacity information to simulation and x[t-1] to the previous stage solutions
     # build up the tail problem
     m = Model();
     # set up the variables
@@ -238,6 +240,8 @@ function createTail(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gC,aC,cC,
 end
 
 function createStream(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gC,aC,cC,tcC,CR)
+    # this function should create the problem structure of every time period from ct to ct + T
+    # it shoud leave the capacity information to simulation and x[t-1] to the previous stage solutions
     # with a tail
     mo = Model();
     # set up the variables
@@ -277,12 +281,14 @@ function createStream(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gC,aC,c
     @constraint(mo,propZ[f in FSM1],Z[f] >= 0);     # RHS change pending
     @constraint(mo,propE[f in FSM3],E[f] >= 0);     # RHS change pending
 
-    # add the cut constraints!!!!!
+    # don't add the cut constraints, leave it to the main function to add cuts
 
     return mo
 end
 
 function createEnd(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gC,aC,cC,tcC,CR)
+    # this function should create the problem structure of every time period from ct to totalT (if totalT <= ct + T)
+    # it shoud leave the capacity information to simulation and x[t-1] to the previous stage solutions
     # with no tail
     m = Model();
     # set up the variables
