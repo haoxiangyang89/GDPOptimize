@@ -1,5 +1,3 @@
-using JuMP,Distributions,Cbc;
-
 function generateCost(ct,tt,LC,S,TS,FSG1,FSG2,FSG3,FSG)
     g = Dict();
     a = Dict();
@@ -343,7 +341,7 @@ function updateUB(X,Y,Z,D,E,L,mUB,FSUB1,FSUB2,FSUB3,FSUB,LC,S,TS,capDict,probDic
     # this is the function that calculates the upper bound in an SDDP iteration
 end
 
-function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probDict)
+function GDP_Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probDict)
     # this is the function that carries out the SDDP and output the solution
     # totalT is the entire horizon, T is the length of the rolling horizon
     # N is the lag of decision, M is the number of threads
@@ -382,6 +380,26 @@ function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probD
     # need a variable to store the cut coefficient!!!!!!!!!!!!!
     cutDict = Dict();
 
+    # precreate the forward problem structure for every time stage
+    # m is the dictionary that stores the forward problem structure
+    if currentT + T - 1 <= totalT
+        endT = currentT + T - 1;
+        for t = currentT:endT
+          # create the template problem for each time period
+          mf[t] = createStream(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
+        end
+        mt = createTail(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
+    else
+        endT = totalT;
+        for t = currentT:endT
+            if t < endT
+                mf[t] = createStream(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
+            else
+                mf[t] = createEnd(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
+            end
+        end
+    end
+
     # if upper bound and lower bound are close enough or the running iteration limit is hit, stop
     while ((ub - lb)/lb >= ϵ) || (iterNo <= 500)
         # sample M scenarios
@@ -402,55 +420,51 @@ function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probD
             if currentT + T - 1 <= totalT
                 endT = currentT + T - 1;
                 for t = currentT:endT
-                    # create the template problem for each time period
-                    m = createStream(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000,cutDict);
-
                     # change RHS for each time period
                     # change the RHS for capacity constraints
-                    JuMP.setRHS(m.conDict[:capArr],ArrCapDict[scenList[k,t]]);
-                    JuMP.setRHS(m.conDict[:capDept],DeptCapDict[scenList[k,t]]);
-                    JuMP.setRHS(m.conDict[:capTot],totalCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capArr],ArrCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capDept],DeptCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capTot],totalCapDict[scenList[k,t]]);
                     if t >= N+1
                         for f in FSM1
-                            JuMP.setRHS(m.conDict[:planDept][f],Xpre[k,f,t - N]);
+                            JuMP.setRHS(mf[t].conDict[:planDept][f],Xpre[k,f,t - N]);
                         end
                     end
                     for f in FSM1
                         if t >= tau[f]
-                            JuMP.setRHS(m.conDict[:planLand][f],Dpre[k,f,t - tau[f]]);
+                            JuMP.setRHS(mf[t].conDict[:planLand][f],Dpre[k,f,t - tau[f]]);
                         end
                     end
                     for f in FSM1
-                        JuMP.setRHS(m.conDict[:propX][f],Xpre[k,f,t - 1]);
-                        JuMP.setRHS(m.conDict[:propZ][f],Zpre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propX][f],Xpre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propZ][f],Zpre[k,f,t - 1]);
                     end
                     for f in FSM
-                        JuMP.setRHS(m.conDict[:propY][f],Ypre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propY][f],Ypre[k,f,t - 1]);
                     end
                     for f in FSM3
-                        JuMP.setRHS(m.conDict[:propE][f],Epre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propE][f],Epre[k,f,t - 1]);
                     end
 
                     # solve the problem
-                    solve(m);
+                    solve(mf[t]);
 
                     # record each scenario stream's optimal value and optimal solutions
                     for f in FSM1
-                        Xpre[k,f,t] = getvalue(m.varDict[:X][f]);
-                        Zpre[k,f,t] = getvalue(m.varDict[:Z][f]);
-                        Dpre[k,f,t] = getvalue(m.varDict[:D][f]);
+                        Xpre[k,f,t] = getvalue(mf[t].varDict[:X][f]);
+                        Zpre[k,f,t] = getvalue(mf[t].varDict[:Z][f]);
+                        Dpre[k,f,t] = getvalue(mf[t].varDict[:D][f]);
                     end
                     for f in FSM
-                        Ypre[k,f,t] = getvalue(m.varDict[:Y][f]);
-                        Lpre[k,f,t] = getvalue(m.varDict[:L][f]);
+                        Ypre[k,f,t] = getvalue(mf[t].varDict[:Y][f]);
+                        Lpre[k,f,t] = getvalue(mf[t].varDict[:L][f]);
                     end
                     for f in FSM3
-                        Epre[k,f,t] = getvalue(m.varDict[:E][f]);
+                        Epre[k,f,t] = getvalue(mf[t].varDict[:E][f]);
                     end
                 end
 
                 # change RHS for the tail problem
-                mt = createTail(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
                 for t in (currentT + T):totalT
                     JuMP.setRHS(mt.conDict[:capArr][t],ArrCapDict[tailList[t]]);
                     JuMP.setRHS(mt.conDict[:capDept][t],DeptCapDict[tailList[t]]);
@@ -503,51 +517,47 @@ function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probD
             else
                 endT = totalT;
                 for t = currentT:endT
-                    if t < endT
-                        m = createStream(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
-                    else
-                        m = createEnd(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
                     # change RHS for each time period
                     # change the RHS for capacity constraints
-                    JuMP.setRHS(m.conDict[:capArr],ArrCapDict[scenList[k,t]]);
-                    JuMP.setRHS(m.conDict[:capDept],DeptCapDict[scenList[k,t]]);
-                    JuMP.setRHS(m.conDict[:capTot],totalCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capArr],ArrCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capDept],DeptCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capTot],totalCapDict[scenList[k,t]]);
                     if t >= N
                         for f in FSM1
-                            JuMP.setRHS(m.conDict[:planDept][f],Xpre[k,f,t - N]);
+                            JuMP.setRHS(mf[t].conDict[:planDept][f],Xpre[k,f,t - N]);
                         end
                     end
                     for f in FSM1
                         if t >= tau[f]
-                            JuMP.setRHS(m.conDict[:planLand][f],Dpre[k,f,t - tau[f]]);
+                            JuMP.setRHS(mf[t].conDict[:planLand][f],Dpre[k,f,t - tau[f]]);
                         end
                     end
                     for f in FSM1
-                        JuMP.setRHS(m.conDict[:propX][f],Xpre[k,f,t - 1]);
-                        JuMP.setRHS(m.conDict[:propZ][f],Zpre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propX][f],Xpre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propZ][f],Zpre[k,f,t - 1]);
                     end
                     for f in FSM
-                        JuMP.setRHS(m.conDict[:propY][f],Ypre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propY][f],Ypre[k,f,t - 1]);
                     end
                     for f in FSM3
-                        JuMP.setRHS(m.conDict[:propE][f],Epre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propE][f],Epre[k,f,t - 1]);
                     end
 
                     # solve the problem
-                    solve(m);
+                    solve(mf[t]);
 
                     # record each scenario stream's optimal value and optimal solutions
                     for f in FSM1
-                        Xpre[k,f,t] = getvalue(m.varDict[:X][f]);
-                        Zpre[k,f,t] = getvalue(m.varDict[:Z][f]);
-                        Dpre[k,f,t] = getvalue(m.varDict[:D][f]);
+                        Xpre[k,f,t] = getvalue(mf[t].varDict[:X][f]);
+                        Zpre[k,f,t] = getvalue(mf[t].varDict[:Z][f]);
+                        Dpre[k,f,t] = getvalue(mf[t].varDict[:D][f]);
                     end
                     for f in FSM
-                        Ypre[k,f,t] = getvalue(m.varDict[:Y][f]);
-                        Lpre[k,f,t] = getvalue(m.varDict[:L][f]);
+                        Ypre[k,f,t] = getvalue(mf[t].varDict[:Y][f]);
+                        Lpre[k,f,t] = getvalue(mf[t].varDict[:L][f]);
                     end
                     for f in FSM3
-                        Epre[k,f,t] = getvalue(m.varDict[:E][f]);
+                        Epre[k,f,t] = getvalue(mf[t].varDict[:E][f]);
                     end
                 end
             end
