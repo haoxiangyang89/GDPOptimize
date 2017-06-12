@@ -1,4 +1,4 @@
-using JuMP, Cbc, Distributions;
+using JuMP, Cbc, Distributions, CPLEX;
 
 #capAddress = "C:\\Documents\\Git\\GDP_Optimize\\PossList.csv";
 #capProbAdd = "C:\\Documents\\Git\\GDP_Optimize\\ProbList.csv";
@@ -10,7 +10,10 @@ capProbAdd = "/Users/yang902/Desktop/Codes/GDPOptimize/ProbList_Toy.csv";
 ArrAdd = "/Users/yang902/Desktop/Codes/GDPOptimize/Arr_Toy.csv";
 DeptAdd = "/Users/yang902/Desktop/Codes/GDPOptimize/Dept_Toy.csv";
 
-N = 4;
+N = 1;
+totalT = 5;
+currentT = 1;
+include("def.jl");
 include("rollH_New.jl");
 
-g,a,c,tc,cz,r = generateCost(ct,totalT,LC,S,TS,FSM1,FSM2,FSM3,FSM);
+FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probDict = initiMain(capAdd,capProbAdd,ArrAdd,DeptAdd,totalT,N);
