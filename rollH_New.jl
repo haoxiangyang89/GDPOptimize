@@ -1,5 +1,3 @@
-using JuMP,Distributions,Cbc;
-
 function generateCost(ct,tt,LC,S,TS,FSG1,FSG2,FSG3,FSG)
     g = Dict();
     a = Dict();
@@ -72,7 +70,6 @@ function initiMain(capAddress,capProbAdd,ArrAdd,DeptAdd,totalT,N)
         capDict[t] = capTemp;
         probDict[t] = probTemp;
     end
-    currentT = 1;
 
     # read in the original arrival flight schedule
     Arr_info_txt,title = readdlm(ArrAdd,',',header = true);
@@ -97,8 +94,11 @@ function initiMain(capAddress,capProbAdd,ArrAdd,DeptAdd,totalT,N)
     for i in 1:F
         tp = Int64(div(rawArrSeq[i],100) * 2 + round(mod(rawArrSeq[i],100)/30) + 1);
         if tp <= totalT
+            # planned arrival time
             LC[i] = tp;
+            # flight time
             tau[i] = Int64(round(Arr_info_txt[i,rawElapseInd]/30));
+            # take off time
             S[i] = Int64(LC[i] - tau[i]);
             if i in FSI1
                 if (LC[i] - tau[i] <= N)
@@ -134,7 +134,7 @@ function initiMain(capAddress,capProbAdd,ArrAdd,DeptAdd,totalT,N)
     end
     FSI3 = setdiff(FSI3,F3exclude);
 
-    return currentT,FSI1,FSI2,FSI3,FSI,LC,S,TS,tau,capDict,probDict
+    return FSI1,FSI2,FSI3,FSI,LC,S,TS,tau,capDict,probDict
 end
 
 function genCap(mg,ct,gT,capD,probD)
@@ -155,186 +155,216 @@ function genCap(mg,ct,gT,capD,probD)
     return scenList
 end
 
-function initPre(totalT,currentT,M,FSIP1,FSIP2,FSIP3,FSIP)
-    # set up the initial values of X,Y,Z,D,E,L
-    # first component is the thread number
-    # the second number is the flight number
-    # the third number is the time
-    Xp = Dict();
-    Yp = Dict();
-    Zp = Dict();
-    Dp = Dict();
-    Ep = Dict();
-    Lp = Dict();
-    for i in 1:M
-        for t in (currentT - 1):totalT
-            for f in FSIP1
-                Xp[i,f,t] = 0;
-                Zp[i,f,t] = 0;
-                Dp[i,f,t] = 0;
-            end
-            for f in FSIP
-                Yp[i,f,t] = 0;
-                Lp[i,f,t] = 0;
-            end
-            for f in FSIP3
-                Ep[i,f,t] = 0;
-            end
-        end
+function initPre(M,ct,totalT,N,LC,S,TS,tau,FSIP1,FSIP2,FSIP3,FSIP)
+  # construct previous solution for the entire forward loop
+  HX = Dict();
+  HY = Dict();
+  HZ = Dict();
+  HE = Dict();
+  HEZ = Dict();
+  for f in FSIP
+    HX[f] = zeros(tau[f]+N+1);
+    HY[f] = 0;
+  end
+  for f in FSIP1
+    HZ[f] = 0;
+  end
+  for f in FSIP3
+    HE[f] = 0;
+    HEZ[f] = 0;
+  end
+  emptySol = solType(HX,HY,HZ,HE,HEZ);
+  entireSol = Dict();
+  for i in 1:M
+    for t in ct:totalT
+      entireSol[i,t] = emptySol;
     end
-    return Xp,Yp,Zp,Dp,Ep,Lp
+  end
+
+  # fix the first time period: HX!!!!!!!!
+
+  return entireSol;
 end
 
-function createTail(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gC,aC,cC,tcC,CR)
+function createTail(ct,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,g,a,c,tc,cz,CR)
     # this function should create the problem structure of every time period from ct + T + 1 to totalT
     # it shoud leave the capacity information to simulation and x[t-1] to the previous stage solutions
     # build up the tail problem
     m = Model();
     # set up the variables
-    @variable(m,X[FSM1,currentT + T - 1:totalT],Bin);    # clearance
-    @variable(m,D[FSM1,currentT + T - 1:totalT],Bin);    # departure
-    @variable(m,Y[FSM,currentT + T - 1:totalT],Bin);     # landing
-    @variable(m,Z[FSM1,currentT + T - 1:totalT],Bin);    # cancellation
-    @variable(m,L[FSM,currentT + T - 1:totalT],Bin);     # arrival
-    @variable(m,E[FSM3,currentT + T - 1:totalT],Bin);    # taking off
+    @variable(m,X[FSM1,ct:totalT],Bin);    # clearance
+    @variable(m,D[FSM1,(ct-1):totalT],Bin);    # departure
+    @variable(m,Y[FSM,(ct-1):totalT],Bin);     # landing
+    @variable(m,Z[FSM1,(ct-1):totalT],Bin);    # cancellation
+    @variable(m,L[FSM,(ct-1):totalT],Bin);     # arrival
+    @variable(m,E[FSM3,(ct-1):totalT],Bin);    # taking off
+    @variable(m,EZ[FSM3],(ct-1):totalT,Bin);   # cancellation of taking off
+
+    # set up the variables: z variables (local copies of the last stage's state variables)
+    @variable(m,HX[f in FSM,1:(N+tau[f]+1)],Bin);    # history: clearance, departure and arrival
+    @variable(m,HY[FSM],Bin);     # landing
+    @variable(m,HZ[FSM1],Bin);    # cancellation
+    @variable(m,HE[FSM3],Bin);    # taking off
+    @variable(m,HEZ[FSM3],Bin);   # cancellation of takeoff
 
     @variable(m,R1[FSM],Bin);    # emergency outlet of landing
-    @variable(m,R2[FSM3],Bin);   # emergency outlet of taking off
-    addCost1H = @expression(m,addCost1,sum{R1[f]*CR,f in FSM});
-    addCost2H = @expression(m,addCost2,sum{R2[f]*CR,f in FSM3});
+    addCost1H = @expression(m,addCost1,sum(R1[f]*CR for f in FSM));
+    # every flight will eventually land/be cancelled/fly to emergency outlet
     @constraint(m,termCond1[f in FSM1],Z[f,totalT]+Y[f,totalT]+R1[f] == 1);
     @constraint(m,termCond2[f in FSM2],Y[f,totalT]+R1[f] == 1);
-    @constraint(m,termCond3[f in FSM3],E[f,totalT]+R2[f] == 1);
+    @constraint(m,termCond3[f in FSM3],E[f,totalT]+EZ[f,totalT] == 1);
 
     # set up the objective function
-    gdpCostH = @expression(m,gdpCost,sum{sum{gC[f,t]*(D[f,t] - D[f,t-1]),t in max(S[f],currentT+T):totalT},f in FSM1});
-    cancelCostH = @expression(m,cancelCost,sum{sum{cC[f,t]*(Z[f,t] - Z[f,t-1]),t in (currentT+T):totalT},f in FSM1});
-    airborneCostH = @expression(m,airborneCost,sum{sum{aC[f]*(L[f,t] - Y[f,t]),t in max(LC[f],currentT+T):totalT},f in FSM});
-    taxiCostH = @expression(m,taxiCost,sum{sum{tcC[f,t]*(E[f,t] - E[f,t-1]),t in max(currentT+T,TS[f]):totalT},f in FSM3});
-    @objective(m,Min,gdpCost+cancelCost+airborneCost+taxiCost+addCost1+addCost2);
+    gdpCostH = @expression(m,gdpCost,sum(sum(gC[f,t]*(D[f,t] - D[f,t-1]) for t in max(S[f],ct):totalT) for f in FSM1));
+    cancelCostH = @expression(m,cancelCost,sum(sum(c[f,t]*(Z[f,t] - Z[f,t-1]) for t in ct:totalT) for f in FSM1) + sum(sum(cz[f,t]*(EZ[f,t] - EZ[f,t-1]) for t in ct:T) for f in FSM3));
+    airborneCostH = @expression(m,airborneCost,sum(sum(a[f]*(L[f,t] - Y[f,t]) for t in max(LC[f],ct):totalT) for f in FSM));
+    taxiCostH = @expression(m,taxiCost,sum(sum(tc[f,t]*(E[f,t] - E[f,t-1]) for t in max(ct,TS[f]):totalT) for f in FSM3));
+    @objective(m,Min,gdpCost+cancelCost+airborneCost+taxiCost+addCost1);
 
     # set up the constraints
-    @constraint(m,noCancel[f in FSM1, t = (currentT+T):totalT], Z[f,t] + D[f,t] <= 1);
-    @constraint(m,landAfter[f in FSM, t = (currentT+T):totalT], Y[f,t] <= L[f,t]);
-    @constraint(m,planDept1[f in FSM1, t in (currentT+T):totalT;t - currentT - T < N], D[f,t] == 0);                                               # RHS change pending
-    @constraint(m,planDept2[f in FSM1, t in (currentT+T):totalT;t - currentT - T >= N], D[f,t] == X[f,t-N]);
-    @constraint(m,planLand1[f in FSM,t in (currentT+T):totalT;t - currentT - t < tau[f]], L[f,t] == 0);                                                    # RHS change pending
-    @constraint(m,planLand2[f in FSM,t in (currentT+T):totalT;t - currentT - t >= tau[f]], L[f,t] == D[f,t-tau[f]]);
-    @constraint(m,capArr[t in (currentT+T):totalT], sum{Y[f,t] - Y[f,t-1],f in FSM} <= 2000);        # RHS change pending
-    @constraint(m,capDept[t in (currentT+T):totalT], sum{E[f,t] - E[f,t-1],f in FSM3} <= 2000);      # RHS change pending
-    @constraint(m,capTot[t in (currentT+T):totalT], sum{E[f,t] - E[f,t-1],f in FSM3} + sum{Y[f,t] - Y[f,t-1],f in FSM} <= 2000);      # RHS change pending
-    @constraint(m,propX[f in FSM1, t = (currentT+T):totalT], X[f,t] >= X[f,t-1]);
-    @constraint(m,propY[f in FSM, t = (currentT+T):totalT], Y[f,t] >= Y[f,t-1]);
-    @constraint(m,propZ[f in FSM1, t = (currentT+T):totalT], Z[f,t] >= Z[f,t-1]);
-    @constraint(m,propE[f in FSM3, t = (currentT+T):totalT], E[f,t] >= E[f,t-1]);
+    @constraint(m,noCancel[f in FSM1, t in ct:totalT], Z[f,t] + X[f,t] <= 1);
+    @constraint(m,landAfter[f in FSM, t in ct:totalT], Y[f,t] <= L[f,t]);
+    @constraint(m,planDept1[f in FSM1, t in ct:totalT;t - ct < N], D[f,t] == HX[f,ct-(t-N)]);
+    @constraint(m,planDept2[f in FSM1, t in ct:totalT;t - ct >= N], D[f,t] == X[f,t-N]);
+    @constraint(m,planLand1[f in FSM,t in ct:totalT;t - ct < tau[f]], L[f,t] == HX[f,ct-(t-tau[f]-N)]);
+    @constraint(m,planLand2[f in FSM,t in ct:totalT;t - ct >= tau[f]], L[f,t] == D[f,t-tau[f]]);
+    @constraint(m,noCancel[f in FSM3,t in ct:totalT], EZ[f,t] + E[f,t] <= 1);
+    @constraint(m,capArr[t in ct:totalT], sum(Y[f,t] - Y[f,t-1] for f in FSM) <= 0);        # RHS change pending
+    @constraint(m,capDept[t in ct:totalT], sum(E[f,t] - E[f,t-1] for f in FSM3) <= 0);      # RHS change pending
+    @constraint(m,capTot[t in ct:totalT], sum(E[f,t] - E[f,t-1] for f in FSM3) + sum(Y[f,t] - Y[f,t-1] for f in FSM) <= 0);      # RHS change pending
+    @constraint(m,propX1[f in FSM1, t = (ct+1):totalT], X[f,t] >= X[f,t-1]);
+    @constraint(m,propX2[f in FSM1], X[f,ct] >= HX[f,1]);
+    @constraint(m,propY[f in FSM, t = ct:totalT], Y[f,t] >= Y[f,t-1]);
+    @constraint(m,propZ[f in FSM1, t = ct:totalT], Z[f,t] >= Z[f,t-1]);
+    @constraint(m,propE[f in FSM3, t = ct:totalT], E[f,t] >= E[f,t-1]);
+    @constraint(m,propEZ[f in FSM3, t = ct:totalT], EZ[f,t] >= EZ[f,t-1]);
     @constraint(m,F2Arr[f in FSM2, t = max(LC[f],currentT+T):totalT], L[f,t] == 1);
-    @constraint(m,F2noArr[f in FSM2, t = (currentT+T):LC[f]-1], L[f,t] == 0);
-    @constraint(m,noTakeoff[f in FSM1, t = (currentT+T):S[f]-1], D[f,t] == 0);
-    @constraint(m,F3noDept[f in FSM3,t in (currentT+T):totalT;t<TS[f]],E[f,t] == 0);
-    @constraint(m, initX[f in FSM1], X[f,currentT + T - 1] == 0);                          # RHS change pending
-    @constraint(m, initY[f in FSM], Y[f,currentT + T - 1] == 0);                           # RHS change pending
-    @constraint(m, initZ[f in FSM1], Z[f,currentT + T - 1] == 0);                          # RHS change pending
-    @constraint(m, initE[f in FSM3], E[f,currentT + T - 1] == 0);                          # RHS change pending
+    @constraint(m,F2noArr[f in FSM2, t = ct:(LC[f]-1)], L[f,t] == 0);
+    @constraint(m,noTakeoff[f in FSM1, t = ct:(S[f]-1)], D[f,t] == 0);
+    @constraint(m,F3noDept[f in FSM3,t in ct:totalT;t<TS[f]],E[f,t] == 0);
+    @constraint(m, initY[f in FSM], Y[f,ct - 1] == HY[f]);
+    @constraint(m, initZ[f in FSM1], Z[f,ct - 1] == HZ[f]);
+    @constraint(m, initE[f in FSM3], E[f,ct - 1] == HE[f]);
+    @constraint(m, initEZ[f in FSM3], EZ[f,ct - 1] == HEZ[f]);
+
+    # # create a local copy of the variables passed down
+    @constraint(m,histShiftX[f in FSM,i in 1:(N+tau[f]+1)],HX[f,i] == 0);
+    @constraint(m,histShiftY[f in FSM],HY[f] == 0);
+    @constraint(m,histShiftZ[f in FSM1],HZ[f] == 0);
+    @constraint(m,histShiftE[f in FSM3],HE[f] == 0);
+    @constraint(m,histShiftEZ[f in FSM3],HEZ[f] == 0);
 
     return m
 end
 
-function createStream(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gC,aC,cC,tcC,CR)
+function createStream(ct,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,g,a,c,tc,cz)
     # this function should create the problem structure of every time period from ct to ct + T
     # it shoud leave the capacity information to simulation and x[t-1] to the previous stage solutions
     # with a tail
+    # t is the current time period
     mo = Model();
-    # set up the variables
-    @variable(mo,X[FSM1],Bin);    # clearance
-    @variable(mo,D[FSM1],Bin);    # departure
+    # set up the variables: x variables (variables of the current stage)
+    @variable(mo,X[f in FSM,1:(N+tau[f]+1)],Bin);    # history: clearance, departure and arrival
     @variable(mo,Y[FSM],Bin);     # landing
     @variable(mo,Z[FSM1],Bin);    # cancellation
-    @variable(mo,L[FSM],Bin);     # arrival
     @variable(mo,E[FSM3],Bin);    # taking off
+    @variable(mo,EZ[FSM3],Bin);   # cancellation of takeoff
     @variable(mo,θ >= 0);
-    for f in FSM1
-        @variable(mo,H[f,1:(N+tau[f]-1)],Bin);
-    end
+
+    # set up the variables: z variables (local copies of the last stage's state variables)
+    @variable(mo,HX[f in FSM,1:(N+tau[f]+1)],Bin);    # history: clearance, departure and arrival
+    @variable(mo,HY[FSM],Bin);     # landing
+    @variable(mo,HZ[FSM1],Bin);    # cancellation
+    @variable(mo,HE[FSM3],Bin);    # taking off
+    @variable(mo,HEZ[FSM3],Bin);   # cancellation of takeoff
 
     # set up the objective function
-    gdpCostH = @expression(mo,gdpCost,sum{gC[f,t]*D[f],f in FSM1});
-    cancelCostH = @expression(mo,cancelCost,sum{cC[f,t]*Z[f],f in FSM1});
-    airborneCostH = @expression(mo,airborneCost,sum{aC[f]*(L[f] - Y[f]),f in FSM});
-    taxiCostH = @expression(mo,taxiCost,sum{tcC[f,t]*E[f],f in FSM3});
+    gdpCostH = @expression(mo,gdpCost,sum(gC[f,ct]*(X[f,N+1] - X[f,N+2]) for f in FSM1));
+    cancelCostH = @expression(mo,cancelCost,sum(c[f,ct]*(Z[f]-HZ[f]) for f in FSM1)+sum(cz[f,ct]*(EZ[f] - HEZ[f]) for f in FSM3));
+    airborneCostH = @expression(mo,airborneCost,sum(a[f]*(X[f,1+N+tau[f]] - Y[f]) for f in FSM));
+    taxiCostH = @expression(mo,taxiCost,sum(tc[f,ct]*(E[f]-HE[f]) for f in FSM3));
     @objective(mo,Min,gdpCost+cancelCost+airborneCost+taxiCost+θ);
 
-    @constraint(mo,noCancel[f in FSM1],Z[f]+D[f] <= 1);
-    @constraint(mo,landAfter[f in FSM],Y[f] <= L[f]);
-    @constraint(mo,noTakeoff[f in FSM1;t <= S[f]-1],D[f] == 0);
-    @constraint(mo,planLand[f in FSM1;t >= tau[f]+1],L[f] == 0);    # RHS change pending
-    @constraint(mo,planDept[f in FSM1;t >= N+1],D[f] == 0);    # RHS change pending
-    @constraint(mo,recHist[f in FSM1,t in 2:(N+tau[f]-1)],H[f,t] == 0);   # RHS change pending
-    @constraint(mo,recHistC[f in FSM1], H[f,1] == X[f]);
-    @constraint(mo,F2Arr[f in FSM2;t >= LC[f]],L[f] == 1);
-    @constraint(mo,F2noArr[f in FSM2;t < LC[f]],L[f] == 0);
-    @constraint(mo,F3noDept[f in FSM3;t<TS[f]],E[f] == 0);
-    @constraint(mo,capArr,sum{Y[f],f in FSM} <= 2000);    # RHS change pending
-    @constraint(mo,capDept,sum{E[f], f in FSM3} <= 2000); # RHS change pending
-    @constraint(mo,capTot,sum{Y[f],f in FSM} + sum{E[f], f in FSM3} <= 2000);      # RHS change pending
-    @constraint(mo,propX[f in FSM1],X[f] >= 0);     # RHS change pending
-    @constraint(mo,propY[f in FSM],Y[f] >= 0);      # RHS change pending
-    @constraint(mo,propZ[f in FSM1],Z[f] >= 0);     # RHS change pending
-    @constraint(mo,propE[f in FSM3],E[f] >= 0);     # RHS change pending
+    @constraint(mo,noCancel1[f in FSM1],Z[f]+X[f,1] <= 1);
+    @constraint(mo,noCancel2[f in FSM2],Z[f] == 0);
+    @constraint(mo,preclear[f in FSM1;ct < S[f] - N],X[f,1] == 0);
+    @constraint(mo,landAfter[f in FSM],Y[f] <= X[f,1+N+tau[f]]);
+    @constraint(mo,noCancelD[f in FSM3],E[f] + EZ[f] <= 1);
+    @constraint(mo,F3noDept[f in FSM3;t < TS[f]],E[f] == 0);
+
+    # RHS are capacity forecast data
+    @constraint(mo,capArr,sum(Y[f]-HY[f] for f in FSM) <= 0);
+    @constraint(mo,capDept,sum((E[f]-HE[f]) for f in FSM3) <= 0);
+    @constraint(mo,capTot,sum((Y[f]-HY[f]) for f in FSM) + sum((E[f]-HE[f]) for f in FSM3) <= 0);
+
+    @constraint(mo,propX1[f in FSM],X[f,1] >= X[f,2]);
+    @constraint(mo,propXr[f in FSM,i in 2:(N+tau[f]+1)],X[f,i] == HX[f,i-1]);
+    @constraint(mo,propY[f in FSM],Y[f] >= HY[f]);
+    @constraint(mo,propZ[f in FSM1],Z[f] >= HZ[f]);
+    @constraint(mo,propE[f in FSM3],E[f] >= HE[f]);
+    @constraint(mo,propEZ[f in FSM3],EZ[f] >= HEZ[f]);
+
+    # create a local copy of the variables passed down
+    @constraint(mo,histShiftX[f in FSM,i in 1:(N+tau[f]+1)],HX[f,i] == 0);
+    @constraint(mo,histShiftY[f in FSM],HY[f] == 0);
+    @constraint(mo,histShiftZ[f in FSM1],HZ[f] == 0);
+    @constraint(mo,histShiftE[f in FSM3],HE[f] == 0);
+    @constraint(mo,histShiftEZ[f in FSM3],HEZ[f] == 0);
 
     # don't add the cut constraints, leave it to the main function to add cuts
 
     return mo
 end
 
-function createEnd(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gC,aC,cC,tcC,CR)
+function createEnd(ct,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,g,a,c,tc,CR)
     # this function should create the problem structure of every time period from ct to totalT (if totalT <= ct + T)
     # it shoud leave the capacity information to simulation and x[t-1] to the previous stage solutions
     # with no tail
     m = Model();
     # set up the variables
-    @variable(m,X[FSM1],Bin);    # clearance
-    @variable(m,D[FSM1],Bin);    # departure
     @variable(m,Y[FSM],Bin);     # landing
     @variable(m,Z[FSM1],Bin);    # cancellation
     @variable(m,L[FSM],Bin);     # arrival
     @variable(m,E[FSM3],Bin);    # taking off
-    for f in FSM1
-        @variable(mo,H[f,1:(N+tau[f]-1)],Bin);
-    end
+    @variable(m,EZ[FSM3],Bin);    # cancellation of taking off
+
+    # set up the variables: z variables (local copies of the last stage's state variables)
+    @variable(mo,HX[f in FSM,1:(N+tau[f]+1)],Bin);    # history: clearance, departure and arrival
+    @variable(mo,HY[FSM],Bin);     # landing
+    @variable(mo,HZ[FSM1],Bin);    # cancellation
+    @variable(mo,HE[FSM3],Bin);    # taking off
+    @variable(mo,HEZ[FSM3],Bin);   # cancellation of takeoff
 
     @variable(m,R1[FSM],Bin);    # emergency outlet of landing
-    @variable(m,R2[FSM3],Bin);   # emergency outlet of taking off
-    addCost1H = @expression(m,addCost1,sum{R1[f]*CR,f in FSM});
-    addCost2H = @expression(m,addCost2,sum{R2[f]*CR,f in FSM3});
-    @constraint(m,termCond1[f in FSM],Z[f]+Y[f]+R1[f] == 1);
-    @constraint(m,termCond2[f in FSM],E[f]+R2[f] == 1);
+    addCost1H = @expression(m,addCost1,sum(R1[f]*CR for f in FSM));
+    # every flight will eventually land/be cancelled/fly to emergency outlet
+    @constraint(m,termCond1[f in FSM1],Z[f]+Y[f]+R1[f] == 1);
+    @constraint(m,termCond2[f in FSM2],Y[f]+R1[f] == 1);
+    @constraint(m,termCond3[f in FSM3],E[f]+EZ[f] == 1);
 
     # set up the objective function
-    gdpCostH = @expression(m,gdpCost,sum{g[f,t]*D[f],f in FSM1});
-    cancelCostH = @expression(m,cancelCost,sum{c[f,t]*Z[f],f in FSM1});
-    airborneCostH = @expression(m,airborneCost,sum{a[f]*(L[f] - Y[f]),f in FSM});
-    taxiCostH = @expression(m,taxiCost,sum{tc[f]*E[f],f in FSM3});
-    @objective(m,Min,gdpCost+cancelCost+airborneCost+taxiCost+addCost1+addCost2);
+    cancelCostH = @expression(m,cancelCost,sum(c[f,ct]*(Z[f]-HZ[f]) for f in FSM1)+sum(cz[f,t]*(EZ[f]-HZ[f]) for f in FSM3));
+    airborneCostH = @expression(m,airborneCost,sum(a[f]*(L[f] - Y[f]) for f in FSM));
+    taxiCostH = @expression(m,taxiCost,sum(tc[f,ct]*(E[f]-HE[f]) for f in FSM3));
+    @objective(m,Min,cancelCost+airborneCost+taxiCost+addCost1);
 
-    @constraint(m,noCancel[f in FSM1],Z[f]+D[f] <= 1);
+    @constraint(m,noCancel[f in FSM1],Z[f]+HX[f,1] <= 1);
     @constraint(m,landAfter[f in FSM],Y[f] <= L[f]);
-    @constraint(m,noTakeoff[f in FSM1;t <= S[f]-1],D[f] == 0);
-    @constraint(m,planLand[f in FSM1;t >= tau[f]+1],L[f] == 0);    # RHS change pending
-    @constraint(m,planDept[f in FSM1;t >= N+1],D[f] == 0);    # RHS change pending
-    @constraint(m,F2Arr[f in FSM2;t >= LC[f]],L[f] == 1);
-    @constraint(mo,recHist[f in FSM1,t in 2:(N+tau[f]-1)],H[f,t] == 0);   # RHS change pending
-    @constraint(mo,recHistC[f in FSM1], H[f,1] == X[f]);
-    @constraint(m,F2noArr[f in FSM2;t < LC[f]],L[f] == 0);
-    @constraint(m,F3noDept[f in FSM3;t<TS[f]],E[f] == 0);
-    @constraint(m,capArr,sum{Y[f],f in FSM} <= 2000);    # RHS change pending
-    @constraint(m,capDept,sum{E[f], f in FSM3} <= 2000); # RHS change pending
-    @constraint(m,capTot,sum{Y[f],f in FSM} + sum{E[f], f in FSM3} <= 2000);      # RHS change pending
-    @constraint(m,propX[f in FSM1],X[f] >= 0);     # RHS change pending
-    @constraint(m,propY[f in FSM],Y[f] >= 0);      # RHS change pending
-    @constraint(m,propZ[f in FSM1],Z[f] >= 0);     # RHS change pending
-    @constraint(m,propE[f in FSM3],E[f] >= 0);     # RHS change pending
+    @constraint(m,planLand[f in FSM1],L[f] == HX[f,tau[f]+N]);
+    @constraint(m,capArr,sum(Y[f] for f in FSM) <= 2000);    # RHS change pending
+    @constraint(m,capDept,sum(E[f] for f in FSM3) <= 2000); # RHS change pending
+    @constraint(m,capTot,sum(Y[f] for f in FSM) + sum(E[f] for f in FSM3) <= 2000);      # RHS change pending
+    @constraint(m,propY[f in FSM],Y[f] >= HY[f]);
+    @constraint(m,propZ[f in FSM1],Z[f] >= HZ[f]);
+    @constraint(m,propE[f in FSM3],E[f] >= HE[f]);
+    @constraint(m,propEZ[f in FSM3],EZ[f] >= HEZ[f]);
 
-    # add the cut constraints!!!!!
+    # create a local copy of the variables passed down
+    @constraint(m,histShiftX[f in FSM,i in 1:(N+tau[f]+1)],HX[f,i] == 0);
+    @constraint(m,histShiftY[f in FSM],HY[f] == 0);
+    @constraint(m,histShiftZ[f in FSM1],HZ[f] == 0);
+    @constraint(m,histShiftE[f in FSM3],HE[f] == 0);
+    @constraint(m,histShiftEZ[f in FSM3],HEZ[f] == 0);
 
     return m
 end
@@ -343,7 +373,7 @@ function updateUB(X,Y,Z,D,E,L,mUB,FSUB1,FSUB2,FSUB3,FSUB,LC,S,TS,capDict,probDic
     # this is the function that calculates the upper bound in an SDDP iteration
 end
 
-function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probDict)
+function GDP_Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probDict)
     # this is the function that carries out the SDDP and output the solution
     # totalT is the entire horizon, T is the length of the rolling horizon
     # N is the lag of decision, M is the number of threads
@@ -372,21 +402,42 @@ function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probD
     DeptCapDict = Dict(1=>4,2=>3,3=>2);
 
     # set up the default solver as CbcSolver
-    solver = CbcSolver(seconds = 9000);
+    solver = CplexSolver(seconds = 9000);
     ub = 10000000000;
     lb = 0;
     iterNo = 0;
     ϵ = 0.05;
     # generate costs based on their scheduled departure
     gM,aM,cM,tcM,czM,rM = generateCost(currentT,totalT,LC,S,TS,FSM1,FSM2,FSM3,FSM);
-    # need a variable to store the cut coefficient!!!!!!!!!!!!!
-    cutDict = Dict();
+    # need a variable to store the cuts, keys are time periods the cuts are for
+    cutList = Dict();
+
+    # precreate the forward problem structure for every time stage
+    # m is the dictionary that stores the forward problem structure
+    mf = Dict();
+    if currentT + T - 1 <= totalT
+        endT = currentT + T - 1;
+        for t = currentT:endT
+          # create the template problem for each time period
+          mf[t] = createStream(t,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
+        end
+        mt = createTail(endT+1,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
+    else
+        endT = totalT;
+        for t = currentT:endT
+            if t < endT
+                mf[t] = createStream(t,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
+            else
+                mf[t] = createEnd(t,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
+            end
+        end
+    end
 
     # if upper bound and lower bound are close enough or the running iteration limit is hit, stop
     while ((ub - lb)/lb >= ϵ) || (iterNo <= 500)
         # sample M scenarios
         iterNo = iterNo + 1;
-        if currentT + T - 1 <= totalT
+        if currentT + T <= totalT
             scenList = genCap(M,currentT,T,capDict,probDict);
             tailList = Dict();
             for t in (currentT + T):totalT
@@ -402,55 +453,51 @@ function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probD
             if currentT + T - 1 <= totalT
                 endT = currentT + T - 1;
                 for t = currentT:endT
-                    # create the template problem for each time period
-                    m = createStream(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000,cutDict);
-
                     # change RHS for each time period
                     # change the RHS for capacity constraints
-                    JuMP.setRHS(m.conDict[:capArr],ArrCapDict[scenList[k,t]]);
-                    JuMP.setRHS(m.conDict[:capDept],DeptCapDict[scenList[k,t]]);
-                    JuMP.setRHS(m.conDict[:capTot],totalCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capArr],ArrCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capDept],DeptCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capTot],totalCapDict[scenList[k,t]]);
                     if t >= N+1
                         for f in FSM1
-                            JuMP.setRHS(m.conDict[:planDept][f],Xpre[k,f,t - N]);
+                            JuMP.setRHS(mf[t].conDict[:planDept][f],Xpre[k,f,t - N]);
                         end
                     end
                     for f in FSM1
                         if t >= tau[f]
-                            JuMP.setRHS(m.conDict[:planLand][f],Dpre[k,f,t - tau[f]]);
+                            JuMP.setRHS(mf[t].conDict[:planLand][f],Dpre[k,f,t - tau[f]]);
                         end
                     end
                     for f in FSM1
-                        JuMP.setRHS(m.conDict[:propX][f],Xpre[k,f,t - 1]);
-                        JuMP.setRHS(m.conDict[:propZ][f],Zpre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propX][f],Xpre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propZ][f],Zpre[k,f,t - 1]);
                     end
                     for f in FSM
-                        JuMP.setRHS(m.conDict[:propY][f],Ypre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propY][f],Ypre[k,f,t - 1]);
                     end
                     for f in FSM3
-                        JuMP.setRHS(m.conDict[:propE][f],Epre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propE][f],Epre[k,f,t - 1]);
                     end
 
                     # solve the problem
-                    solve(m);
+                    solve(mf[t]);
 
                     # record each scenario stream's optimal value and optimal solutions
                     for f in FSM1
-                        Xpre[k,f,t] = getvalue(m.varDict[:X][f]);
-                        Zpre[k,f,t] = getvalue(m.varDict[:Z][f]);
-                        Dpre[k,f,t] = getvalue(m.varDict[:D][f]);
+                        Xpre[k,f,t] = getvalue(mf[t].varDict[:X][f]);
+                        Zpre[k,f,t] = getvalue(mf[t].varDict[:Z][f]);
+                        Dpre[k,f,t] = getvalue(mf[t].varDict[:D][f]);
                     end
                     for f in FSM
-                        Ypre[k,f,t] = getvalue(m.varDict[:Y][f]);
-                        Lpre[k,f,t] = getvalue(m.varDict[:L][f]);
+                        Ypre[k,f,t] = getvalue(mf[t].varDict[:Y][f]);
+                        Lpre[k,f,t] = getvalue(mf[t].varDict[:L][f]);
                     end
                     for f in FSM3
-                        Epre[k,f,t] = getvalue(m.varDict[:E][f]);
+                        Epre[k,f,t] = getvalue(mf[t].varDict[:E][f]);
                     end
                 end
 
                 # change RHS for the tail problem
-                mt = createTail(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
                 for t in (currentT + T):totalT
                     JuMP.setRHS(mt.conDict[:capArr][t],ArrCapDict[tailList[t]]);
                     JuMP.setRHS(mt.conDict[:capDept][t],DeptCapDict[tailList[t]]);
@@ -503,51 +550,47 @@ function Main(totalT,T,currentT,N,M,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,capDict,probD
             else
                 endT = totalT;
                 for t = currentT:endT
-                    if t < endT
-                        m = createStream(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
-                    else
-                        m = createEnd(currentT,T,totalT,N,FSM1,FSM2,FSM3,FSM,LC,S,TS,tau,gM,aM,cM,tcM,1000);
                     # change RHS for each time period
                     # change the RHS for capacity constraints
-                    JuMP.setRHS(m.conDict[:capArr],ArrCapDict[scenList[k,t]]);
-                    JuMP.setRHS(m.conDict[:capDept],DeptCapDict[scenList[k,t]]);
-                    JuMP.setRHS(m.conDict[:capTot],totalCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capArr],ArrCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capDept],DeptCapDict[scenList[k,t]]);
+                    JuMP.setRHS(mf[t].conDict[:capTot],totalCapDict[scenList[k,t]]);
                     if t >= N
                         for f in FSM1
-                            JuMP.setRHS(m.conDict[:planDept][f],Xpre[k,f,t - N]);
+                            JuMP.setRHS(mf[t].conDict[:planDept][f],Xpre[k,f,t - N]);
                         end
                     end
                     for f in FSM1
                         if t >= tau[f]
-                            JuMP.setRHS(m.conDict[:planLand][f],Dpre[k,f,t - tau[f]]);
+                            JuMP.setRHS(mf[t].conDict[:planLand][f],Dpre[k,f,t - tau[f]]);
                         end
                     end
                     for f in FSM1
-                        JuMP.setRHS(m.conDict[:propX][f],Xpre[k,f,t - 1]);
-                        JuMP.setRHS(m.conDict[:propZ][f],Zpre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propX][f],Xpre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propZ][f],Zpre[k,f,t - 1]);
                     end
                     for f in FSM
-                        JuMP.setRHS(m.conDict[:propY][f],Ypre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propY][f],Ypre[k,f,t - 1]);
                     end
                     for f in FSM3
-                        JuMP.setRHS(m.conDict[:propE][f],Epre[k,f,t - 1]);
+                        JuMP.setRHS(mf[t].conDict[:propE][f],Epre[k,f,t - 1]);
                     end
 
                     # solve the problem
-                    solve(m);
+                    solve(mf[t]);
 
                     # record each scenario stream's optimal value and optimal solutions
                     for f in FSM1
-                        Xpre[k,f,t] = getvalue(m.varDict[:X][f]);
-                        Zpre[k,f,t] = getvalue(m.varDict[:Z][f]);
-                        Dpre[k,f,t] = getvalue(m.varDict[:D][f]);
+                        Xpre[k,f,t] = getvalue(mf[t].varDict[:X][f]);
+                        Zpre[k,f,t] = getvalue(mf[t].varDict[:Z][f]);
+                        Dpre[k,f,t] = getvalue(mf[t].varDict[:D][f]);
                     end
                     for f in FSM
-                        Ypre[k,f,t] = getvalue(m.varDict[:Y][f]);
-                        Lpre[k,f,t] = getvalue(m.varDict[:L][f]);
+                        Ypre[k,f,t] = getvalue(mf[t].varDict[:Y][f]);
+                        Lpre[k,f,t] = getvalue(mf[t].varDict[:L][f]);
                     end
                     for f in FSM3
-                        Epre[k,f,t] = getvalue(m.varDict[:E][f]);
+                        Epre[k,f,t] = getvalue(mf[t].varDict[:E][f]);
                     end
                 end
             end
