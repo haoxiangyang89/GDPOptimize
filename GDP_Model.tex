@@ -129,40 +129,42 @@
 		0 & otherwise\\
 		\end{cases*}\)	
 	\end{longtable}
-	\noindent
-	Figure~\ref{fig:exampleDV} shows example graphs of reasonable values of decision variables along with description of what each set of graphs would represent.\\
+%	\noindent
+%	Figure~\ref{fig:exampleDV} shows example graphs of reasonable values of decision variables along with description of what each set of graphs would represent.\\
 	%\begin{figure}[H]
 	%	\centering
 	%	\includegraphics[width=\textwidth]{exampleDV}
 	%	\caption{Examples of Decision Variables}
 	%	\label{fig:exampleDV}
 	%\end{figure}
-	\newline Our base mathematical program is as follows.
-	\begin{align}
-		\min \quad & \sum_{\omega \in \Omega} p^\omega \bigg[ \sum_{f \in \mathcal{F}_1} \left(\sum_{t = S_f}^T g_{ft}(D_{ft}^\omega - D_{f(t-1)}^\omega) + \sum_{t = 1}^T c_{ft}(Z_{ft}^\omega - Z_{f(t-1)}^\omega) \right) \nonumber\\
-		& +\sum_{f \in \mathcal{F}}\sum_{t = S_f+\tau_f}^T a_{f}(L_{ft}^\omega - Y_{ft}^\omega) + \sum_{f \in \mathcal{F}_3} \sum_{t = O_f}^{T} \left(o_{f}(E_{ft}^\omega - E_{f(t-1)}^\omega) + \sum_{f \in \mathcal{F}_3} c_{ft}(EZ_{ft}^\omega - EZ_{f(t-1)}^\omega)\right) \bigg]\\
-		\text{s.t.} \quad &  Y_{fT}^\omega + Z_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_1, \omega \in \Omega \label{cancelORfly}\\
-		& Z_{ft}^\omega + D_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_1, t \in \mathcal{T}, \omega \in \Omega \label{cancelORplan}\\
-		& X_{ft}^\omega = D_{f(t+N)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T-N\}, \omega \in \Omega \label{planahead}\\
-		& D_{ft}^\omega = L_{f(t + \tau_f)}^\omega \qquad \qquad f \in \mathcal{F}_1, t \in \{1, \dots, T - \tau_{f}\}, \omega \in \Omega \label{depLag}\\
-		& Y_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, \omega \in \Omega \label{mustLand}\\
-		& L_{ft}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{S_f+\tau_f, \dots, T\}, \omega \in \Omega \label{mustArr}\\
-		& L_{ft}^\omega = 0 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{0, \dots, S_f+\tau_f-1\}, \omega \in \Omega \label{cannotArr}\\
-		& Y_{ft}^\omega \leq L_{ft}^\omega \qquad \qquad \forall f \in \mathcal{F}, t \in \mathcal{T}, \omega \in \Omega \label{arrland}\\
-		& E_{fT}^\omega + EZ_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_3, \omega \in \Omega \label{cancelORto}\\
-		& E_{ft}^\omega + EZ_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_3, t \in \mathcal{T}, \omega \in \Omega \label{cancelTO2}\\
-		& \sum_{f \in \mathcal{F}}\left(Y_{ft}^\omega - Y_{f(t-1)}^\omega\right) \leq CA_{t}^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \label{arrCap}\\
-		& \sum_{f \in \mathcal{F}_3}\left(E_{ft}^\omega - E_{f(t-1)}^\omega\right) \leq CD_{t}^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \label{deptCap}\\
-		& \sum_{f \in \mathcal{F}}\left(Y_{ft}^\omega - Y_{f(t-1)}^\omega\right) + \sum_{f \in \mathcal{F}_3}\left(E_{ft}^\omega - E_{f(t-1)}^\omega\right) \leq CT_t^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \label{totalCap}\\
-		& X_{ft}^\omega \geq X_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{S_f - N, \dots, T\}, \omega \in \Omega \label{xupdate}\\
-		& Y_{ft}^\omega \geq Y_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, \omega \in \Omega \label{yupdate}\\
-		& Z_{ft}^\omega \geq Z_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T\}, \omega \in \Omega \label{zupdate}\\
-		& E_{ft}^\omega \geq E_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_3, t \in \{1, \dots, T\}, \omega \in \Omega \label{eupdate}\\
-		& EZ_{ft}^\omega \geq EZ_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_3, t \in \{1, \dots, T\}, \omega \in \Omega \label{ezupdate}\\
-		& X_{ft}^\omega = X_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{S_f - N, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i \label{nonAntX}\\
-		& Y_{ft}^\omega = Y_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i \label{nonAntY}\\
-		& Z_{ft}^\omega = Z_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i \label{nonAntZ}
-	\end{align}
+	\noindent Our extensive formulation of the GDP optimization problem is shown as follows.
+	\begin{subequations}
+		\begin{align}
+			\min \quad & \sum_{\omega \in \Omega} p^\omega \bigg[ \sum_{f \in \mathcal{F}_1} \left(\sum_{t = S_f}^T g_{ft}(D_{ft}^\omega - D_{f(t-1)}^\omega) + \sum_{t = 1}^T c_{ft}(Z_{ft}^\omega - Z_{f(t-1)}^\omega) \right) \nonumber\\
+			& +\sum_{f \in \mathcal{F}}\sum_{t = S_f+\tau_f}^T a_{f}(L_{ft}^\omega - Y_{ft}^\omega) + \sum_{f \in \mathcal{F}_3} \sum_{t = O_f}^{T} \left(o_{f}(E_{ft}^\omega - E_{f(t-1)}^\omega) + c_{ft}(EZ_{ft}^\omega - EZ_{f(t-1)}^\omega)\right) \bigg]\\
+			\text{s.t.} \quad &  Y_{fT}^\omega + Z_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_1, \omega \in \Omega \label{cancelORfly}\\
+			& Z_{ft}^\omega + D_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_1, t \in \mathcal{T}, \omega \in \Omega \label{cancelORplan}\\
+			& X_{ft}^\omega = D_{f(t+N)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T-N\}, \omega \in \Omega \label{planahead}\\
+			& D_{ft}^\omega = L_{f(t + \tau_f)}^\omega \qquad \qquad f \in \mathcal{F}_1, t \in \{1, \dots, T - \tau_{f}\}, \omega \in \Omega \label{depLag}\\
+			& Y_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, \omega \in \Omega \label{mustLand}\\
+			& L_{ft}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{S_f+\tau_f, \dots, T\}, \omega \in \Omega \label{mustArr}\\
+			& L_{ft}^\omega = 0 \qquad \qquad \forall f \in \mathcal{F}_2, t \in \{0, \dots, S_f+\tau_f-1\}, \omega \in \Omega \label{cannotArr}\\
+			& Y_{ft}^\omega \leq L_{ft}^\omega \qquad \qquad \forall f \in \mathcal{F}, t \in \mathcal{T}, \omega \in \Omega \label{arrland}\\
+			& E_{fT}^\omega + EZ_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_3, \omega \in \Omega \label{cancelORto}\\
+			& E_{ft}^\omega + EZ_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_3, t \in \mathcal{T}, \omega \in \Omega \label{cancelTO2}\\
+			& \sum_{f \in \mathcal{F}}\left(Y_{ft}^\omega - Y_{f(t-1)}^\omega\right) \leq CA_{t}^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \label{arrCap}\\
+			& \sum_{f \in \mathcal{F}_3}\left(E_{ft}^\omega - E_{f(t-1)}^\omega\right) \leq CD_{t}^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \label{deptCap}\\
+			& \sum_{f \in \mathcal{F}}\left(Y_{ft}^\omega - Y_{f(t-1)}^\omega\right) + \sum_{f \in \mathcal{F}_3}\left(E_{ft}^\omega - E_{f(t-1)}^\omega\right) \leq CT_t^\omega \qquad \qquad \forall t \in \mathcal{T}, \omega \in \Omega \label{totalCap}\\
+			& X_{ft}^\omega \geq X_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{S_f - N, \dots, T\}, \omega \in \Omega \label{xupdate}\\
+			& Y_{ft}^\omega \geq Y_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, \omega \in \Omega \label{yupdate}\\
+			& Z_{ft}^\omega \geq Z_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T\}, \omega \in \Omega \label{zupdate}\\
+			& E_{ft}^\omega \geq E_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_3, t \in \{1, \dots, T\}, \omega \in \Omega \label{eupdate}\\
+			& EZ_{ft}^\omega \geq EZ_{f(t-1)}^\omega \qquad \qquad \forall f \in \mathcal{F}_3, t \in \{1, \dots, T\}, \omega \in \Omega \label{ezupdate}\\
+			& X_{ft}^\omega = X_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{S_f - N, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i \label{nonAntX}\\
+			& Y_{ft}^\omega = Y_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{S_f + \tau_f, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i \label{nonAntY}\\
+			& Z_{ft}^\omega = Z_{ft}^{i_1} \qquad \qquad \forall f \in \mathcal{F}, t \in \{1, \dots, T\}, i \in \{1, \dots, B\}, \omega \in \Omega_i \label{nonAntZ}
+		\end{align}
+	\end{subequations}
 	The objective of the optimization problem is to minimize expected total cost, including costs for each inbound and outbound flight. For a non-exempted inbound flight, it would either land or be canceled at the end of the time span (Constraint (\ref{cancelORfly})), and it cannot take off when it is canceled (Constraint (\ref{cancelORplan})). Constraint (\ref{planahead}) and (\ref{depLag}) determine the separation between a non-exempted flight's clearance time, departure time and arrival time. Constraint (\ref{mustLand}) - (\ref{cannotArr}) specify arrival/landing time limitations for exempted inbound flights. An inbound flight will have to arrive at the airport before landing due to Constraint (\ref{arrland}).\\
 	\newline
 	For an outbound flight, it should either take off or be cancelled, which is stated in Constraint (\ref{cancelORto}) and (\ref{cancelTO2}). Constraint (\ref{arrCap}) - (\ref{totalCap}) specify the capacity limitation, which is characterized by the convex envelope described in Section~\ref{Capacity}.\\
@@ -174,47 +176,101 @@
 	\newline
 	We take another approach to solve this problem, combining our modeling effort with state-of-art decomposition tools which have been designed to deal with problems with a modest number of scenarios per time period but a long time horizon. Stochastic dual dynamic program (SDDP) was developed by \cite{pereira1991multi} for a multistage stochastic linear program where the process by which data are generated exhibits stagewise independence \textcolor{red}{(this needs a bit more clarification)}. The algorithm uses the piecewise linear nature of the cost-to-go function to iteratively generate Benders cuts to approximate it.\\
 	\newline \cite{zou2016nested} presents a solution method to the multistage stochastic integer program with only binary variables. Instead of the linear Benders type cut, they propose to solve the Lagrangian relaxation of the stage problem and generate Lagrangian cuts and strengthened Benders cuts. These cuts, accompanied with the integer L-shape cuts proposed by \cite{laporte1993integer}, can significantly improve the computational performance of solution algorithms.\\
-	\newline At time period \(t\), let us denote the variables that record the state of being cleared for each flight be \(\mathbf{H}_{ft}\), which is a vector of 0/1 to record whether flight \(f\) has taken off. This vector has a length of \(N + \tau_f\) in order to keep a full history. In addition, we should establish state variables for landing \(V_{ft}\), departure \(W_{ft}\) and cancellation \(U_{ft}\). We can write down the problem for the time period \(t\) as follows:\\
+	%\newline 
+	%At time period \(t\), let us denote the variables that record the state of being cleared for each flight be \(\mathbf{H}_{ft}\), which is a vector of 0/1 to record whether flight \(f\) has taken off. This vector has a length of \(N + \tau_f\) in order to keep a full history. In addition, we should establish state variables for landing \(V_{ft}\), departure \(W_{ft}\) and cancellation \(U_{ft}\). We can write down the problem for the time period \(t\) as follows:\\
 	\newline
-	\textcolor{red}{(I think the approach needs more of an introduction.  It might help make the formulation more understandable.  Right now I don't get what the $\theta^\omega$ terms are or how the formulation is handling uncertainty.  I'm not sure why constraint sets (35) and (36) are part of the formulation and not pre- or post-processing steps, etc.  I will try to read up on SDDP again - but I think we have to make the text more clear.)}
-	\begin{align}
-		(M_t)\quad \min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_f - HD_f) + c_{ft} (Z_f - HZ_f) \right] + \sum_{f \in \mathcal{F}} \left[ a_f (L_f - Y_f)\right] + & \nonumber \\
-		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_f - HE_f) + c_{ft}(EZ_f - HEZ_f)\right] + \sum_{\omega \in \Omega_t} p^\omega \theta^\omega &\\
-		\text{s.t.} \quad & Z_f + D_f \leq 1 & \forall f \in \mathcal{F}_1\\
-		& E_f + EZ_f \leq 1 & \forall f \in \mathcal{F}_3\\
-		& Y_f \leq HL_f & \forall f \in \mathcal{F}\\
-		& \sum_{f \in \mathcal{F}} Y_f - HY_f \leq CA_t &\\
-		& \sum_{f \in \mathcal{F}_3} E_f + HE_f \leq CD_t &\\
-		& \sum_{f \in \mathcal{F}} (Y_f - HY_f) + \sum_{f \in \mathcal{F}_3} (E_f + HE_f) \leq CT_t &\\
-		& X_f \geq HX_f & \forall f \in \mathcal{F}_1\\
-		& Z_f \geq HZ_f & \forall f \in \mathcal{F}_1\\
-		& Y_f \geq HY_f & \forall f \in \mathcal{F}\\
-		& E_f \geq HE_f & \forall f \in \mathcal{F}_3\\
-		& EZ_f \geq HEZ_f & \forall f \in \mathcal{F}_3\\
-		& \text{Make a local copy of the states variables}& \label{inheritCon}\\
-		& \text{Record the state variables}& \label{passDown}\\
-		& \theta^\omega \geq \sum_{f \in \mathcal{F}_1} \mathbf{\pi}_{H,f}^{\omega,k,t,f} (\mathbf{H}_{ft} - \hat{\mathbf{H}}_{ft}) + \sum_{f \in \mathcal{F}}\pi_{V}^{\omega,k,t,f} (V_{ft} - \hat{V}_{ft}) & \nonumber\\
-		& + \sum_{f \in \mathcal{F}_3} \pi_{W}^{\omega,k,t,f} (W_{ft} - \hat{W}_{ft}) + \sum_{f \in \mathcal{F}_1 \cup \mathcal{F}_3} \pi_{U}^{\omega,k,t,f} (U_{ft} - \hat{U}_{ft}) + \hat{Q}^{\omega,k,t} & \forall \omega \in \Omega_t
-	\end{align}
-	In this problem, \(HX,HD,HY,HL,HZ,HE,HEZ\) are all local variables. Constraint Set (\ref{inheritCon}) is used to set up the local copy in the following way:
-	\begin{align*}
-		& HX_f = H_{f,(t-1),1}& \forall f \in \mathcal{F}_1\\
-		& HD_f = H_{f,(t-1),N}& \forall f \in \mathcal{F}_1\\
-		& HY_f = V_{f,(t-1)}& \forall f \in \mathcal{F}\\
-		& HL_f = H_{f,(t-1),N+\tau_{f}}& \forall f \in \mathcal{F}\\
-		& HZ_f = U_{f,(t-1)}& \forall f \in \mathcal{F}_1\\
-		& HE_f = W_{f,(t-1)}& \forall f \in \mathcal{F}_3\\
-		& HEZ_f = U_{f,(t-1)}& \forall f \in \mathcal{F}_3\\
-	\end{align*}
-	To proceed to the next time period \(t+1\), the state variable should be updated using the decisions in the time period \(t\), which is specified in Constraint Set (\ref{passDown}):
-	\begin{align*}
-		& H_{f,t,1} = X_f & \forall f \in \mathcal{F}_1\\
-		& H_{f,t,i} = H_{f,t-1,(i-1)} & \forall f \in \mathcal{F}_1, i = 2, \dots, N+\tau_f\\
-		& V_{f,t} = Y_f & \forall f \in \mathcal{F}\\
-		& W_{f,t} = E_f & \forall f \in \mathcal{F}_3\\
-		& U_{f,t} = Z_f & \forall f \in \mathcal{F}_1\\
-		& U_{f,t} = EZ_f & \forall f \in \mathcal{F}_3
-	\end{align*}
+	\textcolor{red}{(I think the approach needs more of an introduction.  It might help make the formulation more understandable.  Right now I don't get what the $\theta^\omega$ terms are or how the formulation is handling uncertainty.  I'm not sure why constraint sets (35) and (36) are part of the formulation and not pre- or post-processing steps, etc.  I will try to read up on SDDP again - but I think we have to make the text more clear.)}\\
+	\newline
+	\textcolor{blue}{I agree with the comments. I will change the texts this week to match the model.} We can model the GDP problem as a multi-stage stochastic integer program as follows: 
+	\begin{equation}
+		z = \min_{x_1 \in X_1} \  f_1(x_1) + \mathbb{E} \left[ \min_{x_2 \in X_2(x_1)} \ f_2(x_1, \xi_2) + \dots + \mathbb{E} \left[ \min_{x_T \in X_T(x_{T-1})} \ f_T(x_{T-1}, \xi_T)\right] \right],
+	\end{equation}
+	where each function \(f_t, t = 1, \dots T\) is a linear function of the decision variables \(x_t\) at stage \(t\). For each stage the decision variable \(x_t = (D,L,Y,Z,E,EZ,HD,HZ,HY,HX)\), which contains the current stage decisions, status of flights and history records. The uncertainty vector \(\xi_t\) contains the capacity information \(\xi_t = (CA^{\omega_t}, CD^{\omega_t}, CT^{\omega_t})\). We can represent this model with the following transformation:
+	\begin{equation}
+		z = \min_{x_1 \in X_1} f_1(x_1) + \mathbb{E}\left[ Q_2(x_1, \xi_2)\right],
+	\end{equation}
+	and for \(t = 2, 3, \dots T - 1\), we have 
+	\begin{equation}
+		Q_t(x_{t-1},\xi_t) = \min_{x_t \in X_{t}(x_{t-1})}f_t(x_t) + \mathbb{E} \left[ Q_{t+1}(x_t, \xi_{t+1})\right],
+	\end{equation}
+	Then we can expand the formulation of \(Q_t,\ \forall t = 2, \dots, T-1\) in the following manner.
+	\begin{subequations}
+		\begin{align}
+		Q_t(x_{t-1}, \xi_t)  = & &\\
+		\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_{ft} - HD_{ft}) + c_{ft} (Z_{ft} - HZ_{ft}) \right]  + & \nonumber \\
+		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{ft} - HE_{ft}) + c_{ft}(EZ_{ft} - HEZ_{ft}) \right]& \nonumber\\ 
+		& +\sum_{f \in \mathcal{F}} \left[ a_f (L_{ft} - Y_{ft})\right]  + \mathbb{E}\left[Q_{t+1}(x_{t},\xi_{t+1}) \right] &\\
+		\text{s.t.} \quad & Z_{ft} + D_{ft} \leq 1 & \forall f \in \mathcal{F}\\
+		& E_{ft} + EZ_{ft} \leq 1 & \forall f \in \mathcal{F}_3\\
+		& Y_{ft} \leq L_{ft} & \forall f \in \mathcal{F}\\
+		& D_{ft} = HX_{f(t-1)N} & \forall f \in \mathcal{F}\\
+		& L_{ft} = HX_{f(t-1)(N+\tau_{f})}& f \in \mathcal{F}\\
+		& HD_{ft} = D_{f(t-1)} & f \in \mathcal{F}\\
+		& HE_{ft} = E_{f(t-1)} & f \in \mathcal{F}_3\\
+		& HEZ_{ft} = EZ_{f(t-1)} & f \in \mathcal{F}_3\\
+		& HX_{fti} = HX_{f(t-1)(i-1)} & f \in \mathcal{F}, i = 2, \dots, \tau_{f} + N\\
+		& HY_{ft} = Y_{f(t-1)} & f \in \mathcal{F}\\
+		& HZ_{ft} = Z_{f(t-1)} & f \in \mathcal{F}\\
+		& \sum_{f \in \mathcal{F}} Y_{ft} - HY_{ft} \leq CA^{\omega_t} &\\
+		& \sum_{f \in \mathcal{F}_3} E_{ft} + HE_{ft} \leq CD^{\omega_t} &\\
+		& \sum_{f \in \mathcal{F}} (Y_{ft} - HY_{ft}) + \sum_{f \in \mathcal{F}_3} (E_{ft} + HE_{ft}) \leq CT^{\omega_t} &\\
+		& X_{ft} \geq HX_{ft} & \forall f \in \mathcal{F}\\
+		& Z_{ft} \geq HZ_{ft} & \forall f \in \mathcal{F}\\
+		& Y_{ft} \geq HY_{ft} & \forall f \in \mathcal{F}\\
+		& E_{ft} \geq HE_{ft} & \forall f \in \mathcal{F}_3\\
+		& EZ_{ft} \geq HEZ_{ft} & \forall f \in \mathcal{F}_3\\
+		& HX_{fti} \geq HX_{ft(i+1)} & \forall f \in \mathcal{F}, i = 1, \dots, \tau_{f} + N -1,
+		\end{align}
+	\end{subequations}
+	while \(Q_T\) is slightly different to model the terminal conditions. Here to guarantee a relatively complete recourse, we introduce a penalty cost for flights that are not landed or canceled. This cost should be very large to discourage plans that do not finish the action of all flights within the planning horizon.
+	\begin{subequations}
+		\begin{align}
+		\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{fT} (D_{fT} - HD_{fT}) + c_{fT} (Z_{fT} - HZ_{fT}) \right] + & \nonumber \\
+		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{fT} - HE_{fT}) + c_{fT}(EZ_{fT} - HEZ_{fT}) + M RE_{f} \right]& \nonumber\\ 
+		& +\sum_{f \in \mathcal{F}} \left[ a_f (L_{fT} - Y_{fT}) + M R_{f}\right]  &\\
+		\text{s.t.} \quad & Z_{fT} + D_{fT} \leq 1 & \forall f \in \mathcal{F}\\
+		& E_{fT} + EZ_{fT} \leq 1 & \forall f \in \mathcal{F}_3\\
+		& Y_{fT} \leq L_{fT} & \forall f \in \mathcal{F}\\
+		& D_{fT} = HX_{f(T-1)N} & \forall f \in \mathcal{F}\\
+		& L_{fT} = HX_{f(T-1)(N+\tau_{f})}& f \in \mathcal{F}\\
+		& R_f \geq 1 - (Y_{fT} + Z_{fT}) & f \in \mathcal{F}\\
+		& RE_f \geq 1 - (E_{fT} + EZ_{fT}) & f \in \mathcal{F}_3\\
+		& HD_{fT} = D_{f(T-1)} & f \in \mathcal{F}\\
+		& HE_{fT} = E_{f(T-1)} & f \in \mathcal{F}_3\\
+		& HEZ_{fT} = EZ_{f(T-1)} & f \in \mathcal{F}_3\\
+		& HX_{fti} = HX_{f(T-1)(i-1)} & f \in \mathcal{F}, i = 2, \dots, \tau_{f} + N\\
+		& HY_{fT} = Y_{f(T-1)} & f \in \mathcal{F}\\
+		& HZ_{fT} = Z_{f(T-1)} & f \in \mathcal{F}\\
+		& \sum_{f \in \mathcal{F}} Y_{fT} - HY_{fT} \leq CA^{\omega_T} &\\
+		& \sum_{f \in \mathcal{F}_3} E_{fT} + HE_{fT} \leq CD^{\omega_T} &\\
+		& \sum_{f \in \mathcal{F}} (Y_{fT} - HY_{fT}) + \sum_{f \in \mathcal{F}_3} (E_{fT} + HE_{fT}) \leq CT^{\omega_T} &\\
+		& X_{fT} \geq HX_{fT} & \forall f \in \mathcal{F}\\
+		& Z_{fT} \geq HZ_{fT} & \forall f \in \mathcal{F}\\
+		& Y_{fT} \geq HY_{fT} & \forall f \in \mathcal{F}\\
+		& E_{fT} \geq HE_{fT} & \forall f \in \mathcal{F}_3\\
+		& EZ_{fT} \geq HEZ_{fT} & \forall f \in \mathcal{F}_3\\
+		& HX_{fTi} \geq HX_{fT(i+1)} & \forall f \in \mathcal{F}, i = 1, \dots, \tau_{f} + N -1.
+		\end{align}
+	\end{subequations}
+%	In this problem, \(HX,HD,HY,HL,HZ,HE,HEZ\) are all local variables. Constraint Set (\ref{inheritCon}) is used to set up the local copy in the following way:
+%	\begin{align*}
+%		& HX_f = H_{f,(t-1),1}& \forall f \in \mathcal{F}_1\\
+%		& HD_f = H_{f,(t-1),N}& \forall f \in \mathcal{F}_1\\
+%		& HY_f = V_{f,(t-1)}& \forall f \in \mathcal{F}\\
+%		& HL_f = H_{f,(t-1),N+\tau_{f}}& \forall f \in \mathcal{F}\\
+%		& HZ_f = U_{f,(t-1)}& \forall f \in \mathcal{F}_1\\
+%		& HE_f = W_{f,(t-1)}& \forall f \in \mathcal{F}_3\\
+%		& HEZ_f = U_{f,(t-1)}& \forall f \in \mathcal{F}_3\\
+%	\end{align*}
+%	To proceed to the next time period \(t+1\), the state variable should be updated using the decisions in the time period \(t\), which is specified in Constraint Set (\ref{passDown}):
+%	\begin{align*}
+%		& H_{f,t,1} = X_f & \forall f \in \mathcal{F}_1\\
+%		& H_{f,t,i} = H_{f,t-1,(i-1)} & \forall f \in \mathcal{F}_1, i = 2, \dots, N+\tau_f\\
+%		& V_{f,t} = Y_f & \forall f \in \mathcal{F}\\
+%		& W_{f,t} = E_f & \forall f \in \mathcal{F}_3\\
+%		& U_{f,t} = Z_f & \forall f \in \mathcal{F}_1\\
+%		& U_{f,t} = EZ_f & \forall f \in \mathcal{F}_3
+%	\end{align*}
 	\textcolor{blue}{The algorithm to solve this multi-stage stochastic integer program is displayed as follows:\\
 	\begin{algorithm}[H]
 		aa
