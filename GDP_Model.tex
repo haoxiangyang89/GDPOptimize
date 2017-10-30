@@ -157,8 +157,8 @@
 	\noindent Our extensive formulation of the GDP optimization problem is shown as follows.
 	\begin{subequations}
 		\begin{align}
-			\min \quad & \sum_{\omega \in \Omega} p^\omega \bigg[ \sum_{f \in \mathcal{F}_1} \left(\sum_{t = S_f}^T g_{ft}(D_{ft}^\omega - D_{f(t-1)}^\omega) + \sum_{t = 1}^T c_{ft}(Z_{ft}^\omega - Z_{f(t-1)}^\omega) \right) \nonumber\\
-			& +\sum_{f \in \mathcal{F}}\sum_{t = S_f+\tau_f}^T a_{f}(L_{ft}^\omega - Y_{ft}^\omega) + \sum_{f \in \mathcal{F}_3} \sum_{t = O_f}^{T} \left(o_{f}(E_{ft}^\omega - E_{f(t-1)}^\omega) + c_{ft}(EZ_{ft}^\omega - EZ_{f(t-1)}^\omega)\right) \bigg]\\
+			\min \quad & \sum_{\omega \in \Omega} p^\omega \bigg[ \sum_{f \in \mathcal{F}_1} \left(\sum_{t = S_f}^T g_{ft}(D_{ft}^\omega - D_{f(t-1)}^\omega) + \sum_{t = 1}^T c_{ft}(Z_{ft}^\omega - Z_{f(t-1)}^\omega) \right) + \nonumber\\
+			& \sum_{f \in \mathcal{F}}\sum_{t = S_f+\tau_f}^T a_{f}(L_{ft}^\omega - Y_{ft}^\omega) + \sum_{f \in \mathcal{F}_3} \sum_{t = O_f}^{T} \left(o_{f}(E_{ft}^\omega - E_{f(t-1)}^\omega) + c_{ft}(EZ_{ft}^\omega - EZ_{f(t-1)}^\omega)\right) \bigg]\\
 			\text{s.t.} \quad &  Y_{fT}^\omega + Z_{fT}^\omega = 1 \qquad \qquad \forall f \in \mathcal{F}_1, \omega \in \Omega \label{cons:cancelORfly}\\
 			& Z_{ft}^\omega + D_{ft}^\omega \leq 1 \qquad \qquad \forall f \in \mathcal{F}_1, t \in \mathcal{T}, \omega \in \Omega \label{cons:cancelORplan}\\
 			& X_{ft}^\omega = D_{f(t+N)}^\omega \qquad \qquad \forall f \in \mathcal{F}_1, t \in \{1, \dots, T-N\}, \omega \in \Omega \label{cons:planahead}\\
@@ -216,8 +216,8 @@
 		\begin{align}
 		Q_t(x_{t-1}, \xi_t)  = & &\\
 		\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_{ft} - HD_{ft}) + c_{ft} (Z_{ft} - HZ_{ft}) \right]  + & \nonumber \\
-		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{ft} - HE_{ft}) + c_{ft}(EZ_{ft} - HEZ_{ft}) \right]& \nonumber\\ 
-		& +\sum_{f \in \mathcal{F}} \left[ a_f (L_{ft} - Y_{ft})\right]  + \mathbb{E}\left[Q_{t+1}(x_{t},\xi_{t+1}) \right] &\\
+		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{ft} - HE_{ft}) + c_{ft}(EZ_{ft} - HEZ_{ft}) \right] + & \nonumber\\ 
+		& \sum_{f \in \mathcal{F}} \left[ a_f (L_{ft} - Y_{ft})\right]  + \mathbb{E}\left[Q_{t+1}(x_{t},\xi_{t+1}) \right] &\\
 		\text{s.t.} \quad & Z_{ft} + D_{ft} \leq 1 & \forall f \in \mathcal{F} \label{cons:cancelORTOt}\\
 		& E_{ft} + EZ_{ft} \leq 1 & \forall f \in \mathcal{F}_3 \label{cons:cancelTO2t}\\
 		& Y_{ft} \leq L_{ft} & \forall f \in \mathcal{F} \label{cons:arrlandt}\\
@@ -237,15 +237,17 @@
 		& Y_{ft} \geq HY_{ft} & \forall f \in \mathcal{F} \label{cons:transYt}\\
 		& E_{ft} \geq HE_{ft} & \forall f \in \mathcal{F}_3 \label{cons:transEt}\\
 		& EZ_{ft} \geq HEZ_{ft} & \forall f \in \mathcal{F}_3 \label{cons:transEZt}\\
-		& HX_{fti} \geq HX_{ft(i+1)} & \forall f \in \mathcal{F}, i = 1, \dots, \tau_{f} + N -1, \label{cons:transHXt}
+		& HX_{fti} \geq HX_{ft(i+1)} & \forall f \in \mathcal{F}, i = 1, \dots, \tau_{f} + N -1, \label{cons:transHXt}\\
+		& HX_{\cdot t \cdot}, HY_{\cdot t}, HZ_{\cdot t}, HE_{\cdot t}, HEZ_{\cdot t},& \nonumber\\ 
+		&D_{\cdot t}, Y_{\cdot t}, Z_{\cdot t}, EZ_{\cdot t}, L_{\cdot t} \in \{0,1\}& \label{cons:binaryt}\\
 		\end{align}
 	\end{subequations}
 	while \(Q_T\) is slightly different to model the terminal conditions. Here to guarantee a relatively complete recourse, we introduce a penalty cost for flights that are not landed or canceled. This cost should be very large to discourage plans that do not finish the action of all flights within the planning horizon.
 	\begin{subequations}
 		\begin{align}
 		\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{fT} (D_{fT} - HD_{fT}) + c_{fT} (Z_{fT} - HZ_{fT}) \right] + & \nonumber \\
-		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{fT} - HE_{fT}) + c_{fT}(EZ_{fT} - HEZ_{fT}) + M RE_{f} \right]& \nonumber\\ 
-		& +\sum_{f \in \mathcal{F}} \left[ a_f (L_{fT} - Y_{fT}) + M R_{f}\right]  &\\
+		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{fT} - HE_{fT}) + c_{fT}(EZ_{fT} - HEZ_{fT}) + M RE_{f} \right] + & \nonumber\\ 
+		& \sum_{f \in \mathcal{F}} \left[ a_f (L_{fT} - Y_{fT}) + M R_{f}\right]  &\\
 		\text{s.t.} \quad & Z_{fT} + D_{fT} \leq 1 & \forall f \in \mathcal{F}\\
 		& E_{fT} + EZ_{fT} \leq 1 & \forall f \in \mathcal{F}_3\\
 		& Y_{fT} \leq L_{fT} & \forall f \in \mathcal{F}\\
@@ -268,6 +270,8 @@
 		& E_{fT} \geq HE_{fT} & \forall f \in \mathcal{F}_3\\
 		& EZ_{fT} \geq HEZ_{fT} & \forall f \in \mathcal{F}_3\\
 		& HX_{fTi} \geq HX_{fT(i+1)} & \forall f \in \mathcal{F}, i = 1, \dots, \tau_{f} + N -1.
+		& HX_{\cdot T \cdot}, HY_{\cdot T}, HZ_{\cdot T}, HE_{\cdot T}, HEZ_{\cdot T},& \nonumber\\ 
+		&D_{\cdot T}, Y_{\cdot T}, Z_{\cdot T}, EZ_{\cdot T}, L_{\cdot T} \in \{0,1\}&\\
 		\end{align}
 	\end{subequations}
 %	In this problem, \(HX,HD,HY,HL,HZ,HE,HEZ\) are all local variables. Constraint Set (\ref{inheritCon}) is used to set up the local copy in the following way:
@@ -304,7 +308,7 @@
 			\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_{ft} - HD_{ft}) + c_{ft} (Z_{ft} - HZ_{ft}) \right]  + & \nonumber \\
 			& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{ft} - HE_{ft}) + c_{ft}(EZ_{ft} - HEZ_{ft}) \right]& \nonumber\\ 
 			& +\sum_{f \in \mathcal{F}} \left[ a_f (L_{ft} - Y_{ft})\right]  + \theta_t &\\
-			\text{s.t.} \quad & \text{Constraint \eqref{cons:cancelORTOt}-\eqref{cons:transHXt}} & \\
+			\text{s.t.} \quad & \text{Constraint \eqref{cons:cancelORTOt}-\eqref{cons:binaryt}} & \\
 			& \theta_t \geq \pi_t^k(x_{t-1} - \hat{x}_{t-1}) + v_t^k & k = 1, 2, \dots
 		\end{align}
 	\end{subequations}
@@ -312,8 +316,8 @@
 	\begin{subequations}
 		\begin{align}
 			\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_{ft} - HD_{ft}) + c_{ft} (Z_{ft} - HZ_{ft}) \right]  + & \nonumber \\
-			& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{ft} - HE_{ft}) + c_{ft}(EZ_{ft} - HEZ_{ft}) \right]& \nonumber\\ 
-			& +\sum_{f \in \mathcal{F}} \left[ a_f (L_{ft} - Y_{ft})\right]  + \theta_t &\\
+			& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{ft} - HE_{ft}) + c_{ft}(EZ_{ft} - HEZ_{ft}) \right] + & \nonumber\\ 
+			& \sum_{f \in \mathcal{F}} \left[ a_f (L_{ft} - Y_{ft})\right]  + \theta_t &\\
 			\text{s.t.} \quad & Z_{ft} + D_{ft} \leq 1 & \forall f \in \mathcal{F} \label{cons:cancelORTOtr}\\
 			& E_{ft} + EZ_{ft} \leq 1 & \forall f \in \mathcal{F}_3 \label{cons:cancelTO2tr}\\
 			& Y_{ft} \leq L_{ft} & \forall f \in \mathcal{F} \label{cons:arrlandtr}\\
@@ -322,7 +326,7 @@
 			& HD_{ft} = d_{f} & f \in \mathcal{F} \label{cons:TOHisttr2}\\
 			& HE_{ft} = e_{f} & f \in \mathcal{F}_3 \label{cons:TO2Histtr}\\
 			& HEZ_{ft} = ez_{f} & f \in \mathcal{F}_3 \label{cons:cancelTO2Histtr}\\
-			& HX_{fti} = hx_{f} & f \in \mathcal{F}, i = 2, \dots, \tau_{f} + N \label{cons:planHisttr}\\
+			& HX_{fti} = hx_{f(i-1)} & f \in \mathcal{F}, i = 2, \dots, \tau_{f} + N \label{cons:planHisttr}\\
 			& HY_{ft} = y_{f} & f \in \mathcal{F} \label{cons:arrHisttr}\\
 			& HZ_{ft} = z_{f} & f \in \mathcal{F} \label{cons:cancelHisttr}\\
 			& \sum_{f \in \mathcal{F}} Y_{ft} - HY_{ft} \leq CA^{\omega_t} & \label{cons:arrCaptr}\\
@@ -339,10 +343,44 @@
 			& e_{f} = E_{f(t-1)} & \forall f \in \mathcal{F} \label{cons:locale}\\
 			& ez_{f} = EZ_{f(t-1)} & \forall f \in \mathcal{F}_3 \label{cons:localez}\\
 			& y_{f} = Y_{f(t-1)} & \forall f \in \mathcal{F} \label{cons:localy}\\
-			& z_{f} = Z_{f(t-1)} & \forall f \in \mathcal{F} \label{cons:localz}
+			& z_{f} = Z_{f(t-1)} & \forall f \in \mathcal{F} \label{cons:localz}\\
+			& \theta_t \geq \pi_t^k(x_{t-1} - \hat{x}_{t-1}) + v_t^k & k = 1, 2, \dots \label{cons:cuts}\\
+			& HX_{\cdot t \cdot}, HY_{\cdot t}, HZ_{\cdot t}, HE_{\cdot t}, HEZ_{\cdot t},& \nonumber\\ 
+			&D_{\cdot t}, Y_{\cdot t}, Z_{\cdot t}, EZ_{\cdot t}, L_{\cdot t} \in \{0,1\}& \label{cons:binaryr}\\
+			& hx_{\cdot t \cdot}, d_{\cdot t}, e_{\cdot t}, ez_{\cdot t}, y_{\cdot t}, z_{\cdot t} \in \{0,1\}& 
 		\end{align}
 	\end{subequations}
-	A Lagragian relaxation problem is solved in order to generate a valid lower approximation. We relax the constraint~\eqref{cons:localhx}-\eqref{cons:localz} and iteratively solve the relaxed problem to update the multipliers until convergence. The optimal multipliers and the optimal value of the Lagrangian dual can be used as \(\pi_t^k\) and \(v_t^k\) in iteration \(k\).\\
+	A Lagragian relaxation problem \(R_t(x_{t-1},\xi_t)\) is solved in order to generate a valid lower approximation. We relax the constraint~\eqref{cons:localhx}-\eqref{cons:localz} and iteratively solve the relaxed problem to update the multipliers until convergence. The optimal multipliers and the optimal value of the Lagrangian dual can be used as \(\pi_t^k\) and \(v_t^k\) in iteration \(k\).
+	\begin{subequations}
+		\begin{align}
+			\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_{ft} - HD_{ft}) + c_{ft} (Z_{ft} - HZ_{ft}) \right]  + & \nonumber \\
+			& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{ft} - HE_{ft}) + c_{ft}(EZ_{ft} - HEZ_{ft}) \right] + & \nonumber\\ 
+			& \sum_{f \in \mathcal{F}} \left[ a_f (L_{ft} - Y_{ft})\right]  + \theta_t + &\\
+			& \sum_{f \in \mathcal{F}} \left(\sum_{i = 1}^{\tau_{f} + N} \pi_{HX,i} (hx_{fi} - HX_{f(t-1)i}) \right)& \\
+			% not done yet here!!!!!
+			\text{s.t.} \quad & Z_{ft} + D_{ft} \leq 1 & \forall f \in \mathcal{F} \label{cons:cancelORTOtlr}\\
+			& E_{ft} + EZ_{ft} \leq 1 & \forall f \in \mathcal{F}_3 \label{cons:cancelTO2tlr}\\
+			& Y_{ft} \leq L_{ft} & \forall f \in \mathcal{F} \label{cons:arrlandtlr}\\
+			& D_{ft} = hx_{fN} & \forall f \in \mathcal{F} \label{cons:TOHisttlr1}\\
+			& L_{ft} = hx_{f(N+\tau_{f})}& f \in \mathcal{F} \label{cons:landHisttlr}\\
+			& HD_{ft} = d_{f} & f \in \mathcal{F} \label{cons:TOHisttlr2}\\
+			& HE_{ft} = e_{f} & f \in \mathcal{F}_3 \label{cons:TO2Histtlr}\\
+			& HEZ_{ft} = ez_{f} & f \in \mathcal{F}_3 \label{cons:cancelTO2Histtlr}\\
+			& HX_{fti} = hx_{f(i-1)} & f \in \mathcal{F}, i = 2, \dots, \tau_{f} + N \label{cons:planHisttlr}\\
+			& HY_{ft} = y_{f} & f \in \mathcal{F} \label{cons:arrHisttlr}\\
+			& HZ_{ft} = z_{f} & f \in \mathcal{F} \label{cons:cancelHisttlr}\\
+			& \sum_{f \in \mathcal{F}} Y_{ft} - HY_{ft} \leq CA^{\omega_t} & \label{cons:arrCaptlr}\\
+			& \sum_{f \in \mathcal{F}_3} E_{ft} + HE_{ft} \leq CD^{\omega_t} &\label{cons:deptCaptlr}\\
+			& \sum_{f \in \mathcal{F}} (Y_{ft} - HY_{ft}) + \sum_{f \in \mathcal{F}_3} (E_{ft} + HE_{ft}) \leq CT^{\omega_t} & \label{cons:totCaptlr}\\
+			& X_{ft} \geq HX_{ft} & \forall f \in \mathcal{F} \label{cons:transXtlr}\\
+			& Z_{ft} \geq HZ_{ft} & \forall f \in \mathcal{F} \label{cons:transZtlr}\\
+			& Y_{ft} \geq HY_{ft} & \forall f \in \mathcal{F} \label{cons:transYtlr}\\
+			& E_{ft} \geq HE_{ft} & \forall f \in \mathcal{F}_3 \label{cons:transEtlr}\\
+			& EZ_{ft} \geq HEZ_{ft} & \forall f \in \mathcal{F}_3 \label{cons:transEZtlr}\\
+			& HX_{fti} \geq HX_{ft(i+1)} & \forall f \in \mathcal{F}, i = 1, \dots, \tau_{f} + N -1, \label{cons:transHXtlr}\\
+			& \theta_t \geq \pi_t^k(x_{t-1} - \hat{x}_{t-1}) + v_t^k & k = 1, 2, \dots \label{cons:cutslr}
+		\end{align}
+	\end{subequations}
 	\newline
 	The stochastic dual dynamic programming (SDDP) algorithm to solve this multi-stage stochastic integer program is displayed as follows. Every iteration we sample a single path along the scenario tree and generate cuts to better approximate the value function of each stage. Since we cannot enumerate all branches in the scenario tree and get the solution for each of them, it is not possible for us to obtain an exact upper bound \(\overline{z}\). Instead, we calculate a statistical upper bound \(\overline{z}^*\) every \(N\) iteration, with \(N = 20\) in our case. To obtain such a statistical upper bound, we take \(M = 100\) sample paths and solve for the solution along each sample path. Suppose the objective function value of each sample path is \(u_i,\ i = 1, \dots, M\) and \(z_{\alpha/2}\) is the \(1 - \frac{\alpha}{2}\) quantile function value of the standard normal distribution, the \(\alpha\)-level statistical upper bound is:
 	\begin{equation}
