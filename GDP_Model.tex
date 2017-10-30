@@ -19,7 +19,7 @@
 \usepackage{color}
 \usepackage{graphicx}
 \usepackage{hyperref}
-\usepackage[]{algorithm2e}
+\usepackage{algorithm}
 \allowdisplaybreaks
 
 \begin{document}
@@ -55,6 +55,14 @@
 	The FAA profiles appear to be the best publicly available source of information on airport capacities.  As was mentioned in the Introduction, a few researchers have developed methodologies for estimating airport capacities using observed arrival and departure counts and various covariate data.  \cite{gorripaty} introduce an approach based on Random Survival Forests and covariate data including several weather variables and the hour of the day for estimating arrival capacity per hour.  \cite{kim} develop a regression model of arrival and departure rates per quarter hour based on meteorological condition, runway configuration, called rates, and fleet mix.  Unfortunately, much of the data the authors use is not publicly available or available at all when looking several hours into the future making it difficult to apply the authors' methods in a GDP planning context.  \cite{ramnujam} provide details on a quantile regression based approach that the authors use to estimate arrival-departure capacity envelopes per quarter hour.\\
 	\newline
 	\textcolor{red}{Our method for estimating capacity is based on. . . }
+	\textcolor{blue}{
+	\begin{itemize}
+			\item Describe the data scraped from the Internet.
+			\item Why we build 40 categories?
+			\item Describe the categories and how they are built.
+			\item An example of the categories.
+			\item Test the validity of categories.
+	\end{itemize}}
 
 \section{A Dynamic Stochastic Integer Program Formulation}\label{Model}
 	In this section we construct a multi-stage stochastic integer program to model a GDP mathematically. We discuss the overall framework of our proposed method for planning a GDP first before providing the relevant mathematical programming formulation.  In this paper, the single airport where the optimization is applied is called the {\em target airport}.\\
@@ -271,10 +279,56 @@
 %		& U_{f,t} = Z_f & \forall f \in \mathcal{F}_1\\
 %		& U_{f,t} = EZ_f & \forall f \in \mathcal{F}_3
 %	\end{align*}
-	\textcolor{blue}{The algorithm to solve this multi-stage stochastic integer program is displayed as follows:\\
+	Since it is impossible to find an analytical representation of the function \(Q_t(x_{t-1},\xi_t), \forall t = 1, \dots, T-1\), we set up a variable \(\theta_t\)  as a surrogate and sequentially generate cuts to approximate this function. The cuts take the form of:
+	\begin{equation}
+		\theta_t \geq \pi_t^k(x_{t-1} - \hat{x}_{t-1}) + v_t^k, \qquad k = 1, 2, \dots
+	\end{equation}
+	In the process described above, we are generating a cut for every stage in one iteration. It is possible to generate multiple cuts at the same time since we assume the set of scenarios in one stage is a finite discrete set. We denote the total number of scenarios of stage \(t\) as \(N_t\), \(\forall t = 2,3, \dots T\) and we employ \(N_t\) number of surrogates to represent the value function of each scenario. The multiple cuts we generate in each iteration can be represented as:
+	\begin{equation}
+		\theta_t^i \geq \pi_t^{k,i}(x_{t-1} - \hat{x}_{t-1}) + v_t^{k,i}, \qquad k = 1, 2, \dots,\ i = 1, \dots, N_t
+	\end{equation}
+	\textcolor{blue}{Add the relaxation problem to generate the cuts.}\\
+	\newline
+	The stochastic dual dynamic programming (SDDP) algorithm to solve this multi-stage stochastic integer program is displayed as follows. Every iteration we sample a single path along the scenario tree and generate cuts to better approximate the value function of each stage. Since we cannot enumerate all branches in the scenario tree and get the solution for each of them, it is not possible for us to obtain an exact upper bound \(\overline{z}\). Instead, we calculate a statistical upper bound \(\overline{z}^*\) every \(N\) iteration, with \(N = 20\) in our case. To obtain such a statistical upper bound, we take \(M = 100\) sample paths and solve for the solution along each sample path. Suppose the objective function value of each sample path is \(u_i,\ i = 1, \dots, M\) and \(z_{\alpha/2}\) is the \(1 - \frac{\alpha}{2}\) quantile function value of the standard normal distribution, the \(\alpha\)-level statistical upper bound is:
+	\begin{equation}
+		\overline{z}^*_\alpha = \mu + z_{\alpha/2} \frac{\frac{1}{M-1}\sum_{i = 1}^{M} \sigma}{\sqrt{M}},
+	\end{equation}
+	where 
+	\[\mu = \frac{1}{M}\sum_{i = 1}^{M} u_i \]
+	and
+	\[\sigma^2 = (u_i - \frac{1}{M}\sum_{i = 1}^{M} u_i)^2.\]
 	\begin{algorithm}[H]
-		aa
-	\end{algorithm}}
+		\caption{SDDP algorithm to solve the multi-stage GDP problem}
+		\label{alg:SDDP}
+		\begin{algorithmic}[1]
+			\State Initialize with iteration number \(k := 1\), \(LB := -\infty\), \(UB = +\infty\), set up the single stage problems \(P_t^k,\ \forall t = 1, \dots, T\) and select parameters \(M, N\) and \(\epsilon\);
+			\While{\(\frac{UB - LB}{LB} > \epsilon\)} 
+			\State Sample one scenario path \(\Omega = \{\xi_2, \dots, T\}\); \\
+			\State /Forward Step/
+			\For{\(t := 1 \text{ to } T\)}
+			\State Solve problem \(P_t^k\) to collect solution \(x_t^k, \theta_t^k\);
+			\EndFor\\
+			\State /Update statistical upper bound/\\
+			\If{\(k \mod N = 0\)}
+			\State Sample \(M\) scenario paths \(\Omega^i = \{\xi^i_2, \dots, \xi^i_T\}, \ \forall i = 1, \dots, M\);
+			\For{\(i := 1\) to \(M\)}
+			\State Solve problem \(P_t^k\) with scenario path \(i\) to collect solution \(x_t^i\), \(\forall t = 1, \dots, T\);
+			\State Calculate \(u^i := \sum_{t = 2}^{T} f(x_t^i, \xi_t^i) + f_1(x_1^i)\);
+			\EndFor
+			\State Let \(\mu := \frac{1}{M} \sum_{i = 1}^{M} u_i\) and \(\sigma^2 := \frac{1}{M-1} (u_i - \mu)^2\), update the statistical upper bound \(UB := \mu + z_{\alpha/2}\frac{\sigma}{\sqrt{M}}\);
+			\EndIf\\
+			\State /Backward Step/\\
+			\For{\(t := T - 1\) to \(1\)}
+			\For{\(j := 1, \dots, N_t\)}
+			\State Solve the relaxation problem \(R_t^j\) and collect cut coefficients \((v_t^{k,j}, \pi_t^{k,j})\);
+			\EndFor
+			\State Add cut(s) to update Problem \(P_t^{k+1}\);
+			\EndFor
+			\State Update the lower bound using the objective value of \(P_1^{k+1}\);
+			\State \(k := k + 1\);
+			\EndWhile
+		\end{algorithmic}
+	\end{algorithm}
 	\noindent If we implement a vanilla version of SDDiP to solve this problem, we will solve a problem with 48 stages, with each stage being a large-scale MIP. This may not be computationally feasible in real-world application, as shown in Section~\ref{expResults}. We seek for other techniques to improve the computational performance of our vanilla SDDP algorithm.\\
 	\newline
 	\textcolor{blue}{Rolling Horizon Scheme}\\
