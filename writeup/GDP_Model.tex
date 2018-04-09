@@ -84,7 +84,7 @@
 	\newline As stated in Section~\ref{Intro} Figure~\ref{fig:struct}, our optimization process begins with flight schedules and stochastic models of target airport capacities. A multi-stage static stochastic optimization model will be run to generate an optimized implementable schedule, considering the stochastic nature of the capacity. The proposed schedule will be reported to airlines and they will make corresponding decisions to schedule flights for taking off and landing for the current time period. Once this schedule is implemented, traffic managers and our system will track developments and begin a new round of optimization. The advantage of a dynamic optimization scheme like this for GDP planning has been discussed in \cite{richetta1994dynamic}. \\
 	\newline There are three categories of flights considered in our problem: non-exempted inbound flights that will arrive at the target airport, exempted inbound flights that usually have a long flight length, and outbound flights that will take off from the target airport. \\
 	\newline
-	We divide a typical day into multiple time periods. For each time period, the decisions to make include whether each inbound plane should be cleared to take off in \(N\) time periods, be canceled, or neither and whether each inbound plane that has already taken off should be scheduled to land at this current time period. The decisions to be made for each outbound plane from the affected airport that has not taken off yet include whether the plane should be scheduled to take off or be canceled. We distinguish the concept of arrival at an airport's terminal area from that of landing at an airport in our model to record airborne cost in the airport terminal area. An inbound flight can arrive at the airspace around its destination airport but not be granted permission to land.  Indeed this happens frequently in real life when a GDP is operational.
+	We divide a typical day, which starts from 4am and ends at 4am, into multiple time periods. The reason we use 4am as the separation point is that there are usually some arrivals left after the natural start of a day 12am, and once massive delay occurs, the delayed flights are usually arranged from a later departure/arrival time which can be well beyond 12am but usually before 4am. For each time period, the decisions to make include whether each inbound plane should be cleared to take off in \(N\) time periods, be canceled, or neither and whether each inbound plane that has already taken off should be scheduled to land at this current time period. The decisions to be made for each outbound plane from the affected airport that has not taken off yet include whether the plane should be scheduled to take off or be canceled. We distinguish the concept of arrival at an airport's terminal area from that of landing at an airport in our model to record airborne cost in the airport terminal area. An inbound flight can arrive at the airspace around its destination airport but not be granted permission to land.  Indeed this happens frequently in real life when a GDP is operational.\\
 	\newline
 	Here we also set up the concept of \(N\) time periods between the clearance time and the take-off time of a flight. This means in our model, each flight has to be given a clearance time \(N\) time periods before its take-off time. Note that airport surface routing, airport gate management, and air carrier crew assignment are challenging (research and operational) problems in their own right. In this paper we do not attempt to optimize or manage such processes. As long as airport capacity constraints are met, we assume the result is always feasible in terms of surface routing, crew assignment, gate assignment, and other factors on the ground.\\
 	\newline % exogenous information
@@ -208,7 +208,7 @@
 	\begin{equation}
 		z = \min_{x_1 \in X_1} \  f_1(x_1) + \mathbb{E} \left[ \min_{x_2 \in X_2(x_1)} \ f_2(x_1, \xi_2) + \dots + \mathbb{E} \left[ \min_{x_T \in X_T(x_{T-1})} \ f_T(x_{T-1}, \xi_T)\right] \right],
 	\end{equation}
-	where each function \(f_t, t = 1, \dots T\) is a linear function of the decision variables \(x_t\) at stage \(t\). For each stage the decision variable \(x_t = (D,L,Y,Z,E,EZ,HD,HZ,HY,HX)\), which contains the current stage decisions, status of flights and history records. The uncertainty vector \(\xi_t\) contains the capacity information \(\xi_t = (CA^{\omega_t}, CD^{\omega_t}, CT^{\omega_t})\). We can represent this model with the following transformation:
+	where each function \(f_t, t = 1, \dots T\) is a linear function of the decision variables \(x_t\) at stage \(t\). For each stage the decision variable \(x_t = (D,L,Y,Z,E,EZ,H)\), which contains the current stage decisions, status of flights and history records. The uncertainty vector \(\xi_t\) contains the capacity information \(\xi_t = (CA_t, CD_t, CT_t)\). We can represent this model with the following transformation:
 	\begin{equation}
 		z = \min_{x_1 \in X_1} f_1(x_1) + \mathbb{E}\left[ Q_2(x_1, \xi_2)\right],
 	\end{equation}
@@ -216,35 +216,29 @@
 	\begin{equation}
 		Q_t(x_{t-1},\xi_t) = \min_{x_t \in X_{t}(x_{t-1})}f_t(x_t) + \mathbb{E} \left[ Q_{t+1}(x_t, \xi_{t+1})\right],
 	\end{equation}
-	Then we can expand the formulation of \(Q_t,\ \forall t = 2, \dots, T-1\) in the following manner.
+	Then we can expand the formulation of \(Q_t,\ \forall t = 2, \dots, T-1\) in the following manner. For a specific realization \(\xi^{\omega_t}_t\), we have
 	\begin{subequations}
 		\begin{align}
-		Q_t(x_{t-1}, \xi_t)  = & &\\
-		\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_{ft} - HD_{ft}) + c_{ft} (Z_{ft} - HZ_{ft}) \right]  + & \nonumber \\
-		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{ft} - HE_{ft}) + c_{ft}(EZ_{ft} - HEZ_{ft}) \right] + & \nonumber\\ 
+		Q_t(x_{t-1}, \xi^{\omega_t}_t)  = & &\\
+		\min \quad & \sum_{f \in \mathcal{F}_1} \left[ g_{ft} (D_{ft} - D_{ft - 1}) + c_{ft} (Z_{ft} - Z_{ft - 1}) \right]  + & \nonumber \\
+		& \sum_{f \in \mathcal{F}_3} \left[ o_f(E_{ft} - E_{ft - 1}) + c_{ft}(EZ_{ft} - EZ_{ft - 1}) \right] + & \nonumber\\ 
 		& \sum_{f \in \mathcal{F}} \left[ a_f (L_{ft} - Y_{ft})\right]  + \mathbb{E}\left[Q_{t+1}(x_{t},\xi_{t+1}) \right] &\\
 		\text{s.t.} \quad & Z_{ft} + D_{ft} \leq 1 & \forall f \in \mathcal{F} \label{cons:cancelORTOt}\\
 		& E_{ft} + EZ_{ft} \leq 1 & \forall f \in \mathcal{F}_3 \label{cons:cancelTO2t}\\
 		& Y_{ft} \leq L_{ft} & \forall f \in \mathcal{F} \label{cons:arrlandt}\\
-		& D_{ft} = HX_{f(t-1)N} & \forall f \in \mathcal{F} \label{cons:TOHistt1}\\
-		& L_{ft} = HX_{f(t-1)(N+\tau_{f})}& f \in \mathcal{F} \label{cons:landHistt}\\
-		& HD_{ft} = D_{f(t-1)} & f \in \mathcal{F} \label{cons:TOHistt2}\\
-		& HE_{ft} = E_{f(t-1)} & f \in \mathcal{F}_3 \label{cons:TO2Histt}\\
-		& HEZ_{ft} = EZ_{f(t-1)} & f \in \mathcal{F}_3 \label{cons:cancelTO2Histt}\\
-		& HX_{fti} = HX_{f(t-1)(i-1)} & f \in \mathcal{F}, i = 2, \dots, \tau_{f} + N \label{cons:planHistt}\\
-		& HY_{ft} = Y_{f(t-1)} & f \in \mathcal{F} \label{cons:arrHistt}\\
-		& HZ_{ft} = Z_{f(t-1)} & f \in \mathcal{F} \label{cons:cancelHistt}\\
-		& \sum_{f \in \mathcal{F}} Y_{ft} - HY_{ft} \leq CA^{\omega_t} & \label{cons:arrCapt}\\
-		& \sum_{f \in \mathcal{F}_3} E_{ft} + HE_{ft} \leq CD^{\omega_t} &\label{cons:deptCapt}\\
-		& \sum_{f \in \mathcal{F}} (Y_{ft} - HY_{ft}) + \sum_{f \in \mathcal{F}_3} (E_{ft} + HE_{ft}) \leq CT^{\omega_t} & \label{cons:totCapt}\\
-		& X_{ft} \geq HX_{ft} & \forall f \in \mathcal{F} \label{cons:transXt}\\
-		& Z_{ft} \geq HZ_{ft} & \forall f \in \mathcal{F} \label{cons:transZt}\\
-		& Y_{ft} \geq HY_{ft} & \forall f \in \mathcal{F} \label{cons:transYt}\\
-		& E_{ft} \geq HE_{ft} & \forall f \in \mathcal{F}_3 \label{cons:transEt}\\
-		& EZ_{ft} \geq HEZ_{ft} & \forall f \in \mathcal{F}_3 \label{cons:transEZt}\\
-		& HX_{fti} \geq HX_{ft(i+1)} & \forall f \in \mathcal{F}, i = 1, \dots, \tau_{f} + N -1, \label{cons:transHXt}\\
-		& HX_{\cdot t \cdot}, HY_{\cdot t}, HZ_{\cdot t}, HE_{\cdot t}, HEZ_{\cdot t},& \nonumber\\ 
-		&D_{\cdot t}, Y_{\cdot t}, Z_{\cdot t}, EZ_{\cdot t}, L_{\cdot t} \in \{0,1\}& \label{cons:binaryt}\\
+		& D_{ft} = H_{f(t-1)N} & \forall f \in \mathcal{F} \label{cons:TOHistt1}\\
+		& L_{ft} = H_{f(t-1)(N+\tau_{f})}& f \in \mathcal{F} \label{cons:landHistt}\\
+		& H_{fti} = H_{f(t-1)(i-1)} & f \in \mathcal{F}, i = 2, \dots, \tau_{f} + N \label{cons:planHistt}\\
+		& \sum_{f \in \mathcal{F}} Y_{ft} - Y_{ft - 1} \leq CA^{\omega_t}_t & \label{cons:arrCapt}\\
+		& \sum_{f \in \mathcal{F}_3} E_{ft} + E_{ft - 1} \leq CD^{\omega_t}_t &\label{cons:deptCapt}\\
+		& \sum_{f \in \mathcal{F}} (Y_{ft} - Y_{ft - 1}) + \sum_{f \in \mathcal{F}_3} (E_{ft} + E_{ft - 1}) \leq CT^{\omega_t}_t & \label{cons:totCapt}\\
+		& X_{ft} \geq X_{ft} & \forall f \in \mathcal{F} \label{cons:transXt}\\
+		& Z_{ft} \geq Z_{ft - 1} & \forall f \in \mathcal{F} \label{cons:transZt}\\
+		& Y_{ft} \geq Y_{ft - 1} & \forall f \in \mathcal{F} \label{cons:transYt}\\
+		& E_{ft} \geq E_{ft - 1} & \forall f \in \mathcal{F}_3 \label{cons:transEt}\\
+		& EZ_{ft} \geq EZ_{ft - 1} & \forall f \in \mathcal{F}_3 \label{cons:transEZt}\\
+		& H_{fti} \geq H_{ft(i+1)} & \forall f \in \mathcal{F}, i = 1, \dots, \tau_{f} + N -1, \label{cons:transHt}\\
+		& H_{\cdot \cdot t}, D_{\cdot t}, Y_{\cdot t}, Z_{\cdot t}, EZ_{\cdot t}, L_{\cdot t} \in \{0,1\}& \label{cons:binaryt}
 		\end{align}
 	\end{subequations}
 	while \(Q_T\) is slightly different to model the terminal conditions. Here to guarantee a relatively complete recourse, we introduce a penalty cost for flights that are not landed or canceled. This cost should be very large to discourage plans that do not finish the action of all flights within the planning horizon.
@@ -276,7 +270,7 @@
 		& EZ_{fT} \geq HEZ_{fT} & \forall f \in \mathcal{F}_3\\
 		& HX_{fTi} \geq HX_{fT(i+1)} & \forall f \in \mathcal{F}, i = 1, \dots, \tau_{f} + N -1.
 		& HX_{\cdot T \cdot}, HY_{\cdot T}, HZ_{\cdot T}, HE_{\cdot T}, HEZ_{\cdot T},& \nonumber\\ 
-		&D_{\cdot T}, Y_{\cdot T}, Z_{\cdot T}, EZ_{\cdot T}, L_{\cdot T} \in \{0,1\}&\\
+		&D_{\cdot T}, Y_{\cdot T}, Z_{\cdot T}, EZ_{\cdot T}, L_{\cdot T} \in \{0,1\}&
 		\end{align}
 	\end{subequations}
 %	In this problem, \(HX,HD,HY,HL,HZ,HE,HEZ\) are all local variables. Constraint Set (\ref{inheritCon}) is used to set up the local copy in the following way:
@@ -389,12 +383,12 @@
 	\newline
 	The stochastic dual dynamic programming (SDDP) algorithm to solve this multi-stage stochastic integer program is displayed as follows. Every iteration we sample a single path along the scenario tree and generate cuts to better approximate the value function of each stage. Since we cannot enumerate all branches in the scenario tree and get the solution for each of them, it is not possible for us to obtain an exact upper bound \(\overline{z}\). Instead, we calculate a statistical upper bound \(\overline{z}^*\) every \(N\) iteration, with \(N = 20\) in our case. To obtain such a statistical upper bound, we take \(M = 100\) sample paths and solve for the solution along each sample path. Suppose the objective function value of each sample path is \(u_i,\ i = 1, \dots, M\) and \(z_{\alpha/2}\) is the \(1 - \frac{\alpha}{2}\) quantile function value of the standard normal distribution, the \(\alpha\)-level statistical upper bound is:
 	\begin{equation}
-		\overline{z}^*_\alpha = \mu + z_{\alpha/2} \frac{\frac{1}{M-1}\sum_{i = 1}^{M} \sigma}{\sqrt{M}},
+		\overline{z}^*_\alpha = \mu + z_{\alpha/2} \frac{\sigma}{\sqrt{M}},
 	\end{equation}
 	where 
 	\[\mu = \frac{1}{M}\sum_{i = 1}^{M} u_i \]
 	and
-	\[\sigma^2 = (u_i - \frac{1}{M}\sum_{i = 1}^{M} u_i)^2.\]
+	\[\sigma^2 = \frac{1}{M-1}\sum_{i = 1}^{M} (u_i - \mu)^2.\]
 	\begin{algorithm}[H]
 		\caption{SDDP algorithm to solve the multi-stage GDP problem}
 		\label{alg:SDDP}
